@@ -63,9 +63,9 @@
     }
 
     .enter-prompt {
-      margin-top: 40px;
+      margin-top: 32px;
       font-family: Consolas, 'Noto Sans Mono CJK TC', 'Source Han Mono TC', 'Microsoft JhengHei', 'PingFang TC', monospace;
-      font-size: 18px;
+      font-size: 14px;
       color: #ff2b2b;
       text-shadow:
         0 0 5px rgba(255, 43, 43, 0.8),
@@ -93,7 +93,7 @@
       z-index: 10;
       opacity: 0;
       visibility: hidden;
-      padding: 40px;
+      padding: 32px;
       box-sizing: border-box;
     }
 
@@ -126,7 +126,7 @@
        CSS DASHED WINDOW
        ======================================== */
     .css-dashed-window {
-      max-width: 820px;
+      max-width: 656px;
       width: 100%;
       background: #000;
       position: relative;
@@ -199,7 +199,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 15px;
+      padding: 8px 12px;
       background: #1a1a4a;
       position: relative;
     }
@@ -226,7 +226,7 @@
 
     .css-dashed-window .titlebar-title {
       font-family: Consolas, 'Noto Sans Mono CJK TC', 'Source Han Mono TC', 'Microsoft JhengHei', 'PingFang TC', monospace;
-      font-size: 14px;
+      font-size: 11px;
       color: #ffffff;
       text-shadow:
         -0.5px 0 0 rgba(255, 100, 100, 0.4),
@@ -241,12 +241,12 @@
 
     .css-dashed-window .titlebar-controls {
       display: flex;
-      gap: 10px;
+      gap: 8px;
     }
 
     .css-dashed-window .circle {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       border: 1px solid #ff2b2b;
       box-shadow:
@@ -267,7 +267,7 @@
     }
 
     .css-dashed-window .body-scroll {
-      max-height: 400px;
+      max-height: 320px;
       overflow-y: auto;
       overflow-x: hidden;
       margin-top: 3px;
@@ -276,7 +276,7 @@
     }
 
     .css-dashed-window .body-scroll::-webkit-scrollbar {
-      width: 8px;
+      width: 6px;
     }
 
     .css-dashed-window .body-scroll::-webkit-scrollbar-track {
@@ -289,9 +289,9 @@
     }
 
     .css-dashed-window .body-content {
-      padding: 15px 20px;
+      padding: 12px 16px;
       font-family: Consolas, 'Noto Sans Mono CJK TC', 'Source Han Mono TC', 'Microsoft JhengHei', 'PingFang TC', monospace;
-      font-size: 18px;
+      font-size: 14px;
       line-height: 1.4;
       color: #ff2b2b;
       text-shadow:
@@ -344,18 +344,18 @@
 
     /* Language selection menu */
     .lang-menu {
-      padding: 20px 0;
+      padding: 16px 0;
     }
 
     .lang-option {
       color: #666;
-      padding: 5px 0;
+      padding: 4px 0;
       text-shadow: none;
     }
 
     .lang-selected {
       color: #ff2b2b;
-      padding: 5px 0;
+      padding: 4px 0;
       text-shadow:
         0 0 3px rgba(255, 43, 43, 1),
         0 0 6px rgba(255, 43, 43, 0.85),
@@ -363,9 +363,9 @@
     }
 
     .lang-hint {
-      margin-top: 20px;
+      margin-top: 16px;
       color: #666;
-      font-size: 14px;
+      font-size: 11px;
     }
 
     @keyframes crt-flicker {
@@ -1244,7 +1244,7 @@
       const contentW = countdownPre.scrollWidth;
       const contentH = countdownPre.scrollHeight;
       const padding = 20;
-      const maxWidth = 1280;
+      const maxWidth = 1024;
       const availW = Math.min(maxWidth, Math.max(0, hero.clientWidth - padding * 2));
       const availH = Math.max(0, hero.clientHeight * 0.6 - padding * 2);
 
