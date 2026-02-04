@@ -529,6 +529,148 @@
       return LANG[selectedLang][key];
     }
 
+    // ========================================
+    // Web Audio API - Retro Terminal Sounds
+    // ========================================
+    let audioCtx = null;
+    let ambientNodes = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      // Start ambient hum if not already running
+      if (!ambientNodes) {
+        startAmbientHum();
+      }
+    }
+
+    function startAmbientHum() {
+      if (!audioCtx) return;
+      ambientNodes = [];
+      const now = audioCtx.currentTime;
+
+      // Processing hum - layered low tones at half volume
+      const freqs = [60, 120, 180];
+      freqs.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = (0.012 / (i + 1)) * 0.5; // Half volume
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        ambientNodes.push({ osc, gain });
+      });
+
+      // Subtle warble
+      const warble = audioCtx.createOscillator();
+      const warbleGain = audioCtx.createGain();
+      warble.type = 'sine';
+      warble.frequency.value = 90;
+      warbleGain.gain.value = 0.008 * 0.5; // Half volume
+
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.frequency.value = 0.5;
+      lfoGain.gain.value = 10;
+      lfo.connect(lfoGain);
+      lfoGain.connect(warble.frequency);
+
+      warble.connect(warbleGain);
+      warbleGain.connect(audioCtx.destination);
+      warble.start(now);
+      lfo.start(now);
+      ambientNodes.push({ osc: warble, gain: warbleGain, lfo });
+    }
+
+    function stopAmbientHum() {
+      if (ambientNodes) {
+        ambientNodes.forEach(node => {
+          if (node.osc) node.osc.stop();
+          if (node.lfo) node.lfo.stop();
+        });
+        ambientNodes = null;
+      }
+    }
+
+    function playEnterSound() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 600;
+      const now = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    }
+
+    function playSelectSound() {
+      if (!audioCtx) return;
+      // Select 2 - soft blip
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 600;
+      const now = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0.03, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    }
+
+    function playConfirmSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      // Double beep - rising
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'square';
+      osc1.frequency.value = 800;
+      gain1.gain.setValueAtTime(0.03, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.05);
+      // Second beep (higher)
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'square';
+      osc2.frequency.value = 1000;
+      gain2.gain.setValueAtTime(0.03, now + 0.07);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now + 0.07);
+      osc2.stop(now + 0.12);
+    }
+
+    function playErrorSound() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 150;
+      const now = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+
     // DOM elements
     let countdownHero = null;
     let enterPrompt = null;
@@ -737,6 +879,7 @@
     }
 
     function showValidationError(message, callback) {
+      playErrorSound();
       const baseHTML = staticContent.innerHTML;
       staticContent.innerHTML = baseHTML + `<br>[ERROR] ${message}`;
       scrollToBottom();
@@ -759,6 +902,8 @@
       if (currentPhase === PHASE_INITIAL) {
         if (event.key === 'Enter') {
           event.preventDefault();
+          initAudio();
+          playEnterSound();
           spawnWindow();
         }
         return;
@@ -774,11 +919,13 @@
       if (currentPhase === PHASE_LANG_SELECT) {
         if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
           event.preventDefault();
+          playSelectSound();
           // Toggle between 0 and 1 (cycles)
           langMenuIndex = langMenuIndex === 0 ? 1 : 0;
           renderLangMenu();
         } else if (event.key === 'Enter') {
           event.preventDefault();
+          playConfirmSound();
           selectedLang = langMenuIndex === 0 ? 'en' : 'zh';
           transitionPhase(PHASE_TERMINAL_SIM);
         }
@@ -793,6 +940,7 @@
 
         if (event.key === 'Enter') {
           event.preventDefault();
+          playConfirmSound();
           if (currentPhase === PHASE_NAME_PROMPT) {
             userInput.name = inputBuffer;
             inputBuffer = '';

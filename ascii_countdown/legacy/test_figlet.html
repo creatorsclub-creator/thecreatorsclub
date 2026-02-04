@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASCII Countdown Test - Figlet</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+    }
+
+    /* Hero container */
+    .ascii-hero {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* The <pre> itself */
+    #asciiCountdown {
+      margin: 0;
+      padding: 0;
+      white-space: pre;
+      display: block;
+
+      /* font rendering */
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.1;
+
+      /* colour with moderate GPU-accelerated neon glow - reduced intensity */
+      color: #ff2b2b;
+      filter:
+        drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))
+        drop-shadow(0 0 20px rgba(255, 0, 0, 0.6))
+        drop-shadow(0 0 40px rgba(255, 0, 0, 0.4));
+      text-shadow:
+        0 0 5px rgba(255, 43, 43, 0.8),
+        0 0 10px rgba(255, 43, 43, 0.6);
+
+      /* scaling */
+      transform-origin: center center;
+      will-change: transform;
+
+      /* avoid weird glyph behaviour */
+      font-variant-ligatures: none;
+      -webkit-font-smoothing: none;
+      text-rendering: geometricPrecision;
+
+      /* stop scrollbars */
+      overflow: visible;
+
+      /* CRT flicker animation on everything */
+      animation: crt-flicker 2s infinite;
+    }
+
+    /* CRT blinking effect for labels */
+    .crt-blink {
+      animation: crt-flicker 2s infinite;
+      opacity: 1;
+    }
+
+    @keyframes crt-flicker {
+      0% { opacity: 1; }
+      2% { opacity: 0.97; }
+      4% { opacity: 1; }
+      6% { opacity: 0.92; }
+      8% { opacity: 1; }
+      10% { opacity: 0.96; }
+      12% { opacity: 1; }
+      20% { opacity: 0.98; }
+      22% { opacity: 0.9; }
+      24% { opacity: 1; }
+      26% { opacity: 0.95; }
+      28% { opacity: 1; }
+      45% { opacity: 1; }
+      47% { opacity: 0.91; }
+      49% { opacity: 1; }
+      52% { opacity: 0.96; }
+      54% { opacity: 1; }
+      70% { opacity: 1; }
+      72% { opacity: 0.88; }
+      73% { opacity: 0.97; }
+      74% { opacity: 0.9; }
+      75% { opacity: 1; }
+      85% { opacity: 1; }
+      87% { opacity: 0.94; }
+      89% { opacity: 1; }
+      100% { opacity: 1; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="ascii-hero">
+    <pre id="asciiCountdown">Loading...</pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/figlet@1.7.0/lib/figlet.js"></script>
+  <script>
+  (function() {
+    // Target time: 7pm on March 28th 2026, Taiwan time (UTC+08:00)
+    const TARGET = new Date("2026-03-28T19:00:00+08:00").getTime();
+
+    // Font to use
+    const FONT_NAME = "basic";
+
+    let pre = null;
+    let fontReady = false;
+    let glyphCache = {};
+    let glyphHeight = 0;
+    let glyphWidth = 0;
+
+    // Wait for DOM and initialize
+    function init() {
+      pre = document.getElementById("asciiCountdown");
+      if (!pre) {
+        setTimeout(init, 100);
+        return;
+      }
+
+      pre.textContent = "Loading font...";
+      loadFont();
+    }
+
+    function loadFont() {
+      const fontUrl = `https://unpkg.com/figlet@1.7.0/fonts/${encodeURIComponent(FONT_NAME)}.flf`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+
+      fetch(fontUrl, { signal: controller.signal, mode: "cors" })
+        .then(res => {
+          clearTimeout(timeout);
+          if (!res.ok) throw new Error(`Font fetch failed: ${res.status} ${res.statusText}`);
+          return res.text();
+        })
+        .then(fontData => {
+          figlet.parseFont(FONT_NAME, fontData);
+          fontReady = true;
+          buildFixedWidthGlyphs();
+          tick();
+        })
+        .catch(err => {
+          console.error("Font load error:", err);
+          pre.textContent = "Font load error (check console/CSP).";
+        });
+    }
+
+    // Pre-render all characters as fixed-width glyphs
+    function buildFixedWidthGlyphs() {
+      try {
+        const chars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':'];
+        let maxWidth = 0;
+
+        // First pass: render each character and find max width
+        const renderedChars = {};
+        for (const ch of chars) {
+          const ascii = figlet.textSync(ch, { font: FONT_NAME });
+          const lines = ascii.split('\n');
+          renderedChars[ch] = lines;
+
+          // Find the widest line in this character
+          for (const line of lines) {
+            maxWidth = Math.max(maxWidth, line.length);
+          }
+
+          glyphHeight = Math.max(glyphHeight, lines.length);
+        }
+
+        glyphWidth = maxWidth;
+
+        // Second pass: pad all characters to the same width
+        for (const ch of chars) {
+          const lines = renderedChars[ch];
+          const paddedLines = [];
+
+          // Pad height
+          while (lines.length < glyphHeight) {
+            lines.push('');
+          }
+
+          // Pad width on each line and replace trailing spaces with nbsp to prevent browser trimming
+          for (const line of lines) {
+            let padded;
+
+            // Center colons by adding padding on both sides
+            if (ch === ':') {
+              const trimmedLength = line.trimEnd().length;
+              const totalPadding = maxWidth - trimmedLength;
+              const leftPadding = Math.floor(totalPadding / 2);
+              const rightPadding = totalPadding - leftPadding;
+              padded = ' '.repeat(leftPadding) + line.trimEnd() + ' '.repeat(rightPadding);
+            } else {
+              // Left-align other characters
+              padded = line.padEnd(maxWidth, ' ');
+            }
+
+            // Replace all spaces with nbsp to prevent any trimming
+            padded = padded.replace(/ /g, '\u00A0');
+            paddedLines.push(padded);
+          }
+
+          glyphCache[ch] = paddedLines;
+        }
+
+        console.log('Glyph width:', glyphWidth, 'height:', glyphHeight);
+        console.log('Glyph cache:', glyphCache);
+
+        // Initial fit
+        fitToHero();
+      } catch (e) {
+        console.error("Error building fixed-width glyphs:", e);
+      }
+    }
+
+    // Render text using fixed-width glyphs
+    function renderFixedWidth(text) {
+      const lines = Array.from({ length: glyphHeight }, () => '');
+
+      for (const ch of text) {
+        const glyph = glyphCache[ch] || glyphCache['0'];
+        for (let i = 0; i < glyphHeight; i++) {
+          lines[i] += glyph[i];
+        }
+      }
+
+      return lines.join('\n');
+    }
+
+    // Generate labels line centered above each time segment
+    function generateLabels() {
+      const labels = ['_WEEK[S]', '_DAY[S]', '_HOUR[S]', '_MINUTE[S]', '_SECOND[S]', '_MILISCOND[S]'];
+      const digitWidth = glyphWidth * 2; // Two digits per segment
+      const colonWidth = glyphWidth; // One colon character
+
+      let labelLine = '';
+      let position = 0;
+
+      for (let i = 0; i < labels.length; i++) {
+        const label = labels[i];
+        const segmentWidth = digitWidth;
+
+        // Center the label over the segment
+        const padding = Math.floor((segmentWidth - label.length) / 2);
+        const labelPadded = ' '.repeat(padding) + label + ' '.repeat(segmentWidth - padding - label.length);
+
+        labelLine += labelPadded;
+
+        // Add colon spacing (except after last segment)
+        if (i < labels.length - 1) {
+          labelLine += ' '.repeat(colonWidth);
+        }
+      }
+
+      // Replace spaces with nbsp
+      return labelLine.replace(/ /g, '\u00A0');
+    }
+
+    function pad(num, width) {
+      const s = String(num);
+      return s.length >= width ? s : ('0'.repeat(width - s.length) + s);
+    }
+
+    function breakdown(ms) {
+      if (ms < 0) ms = 0;
+
+      const totalSeconds = Math.floor(ms / 1000);
+      const milliseconds = ms % 1000;
+
+      const seconds = totalSeconds % 60;
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const minutes = totalMinutes % 60;
+      const totalHours = Math.floor(totalMinutes / 60);
+      const hours = totalHours % 24;
+      const totalDays = Math.floor(totalHours / 24);
+
+      const weeks = Math.floor(totalDays / 7);
+      const days = totalDays % 7;
+
+      return { weeks, days, hours, minutes, seconds, milliseconds };
+    }
+
+    // Fit the <pre> to its hero container
+    function fitToHero() {
+      const hero = pre.closest(".ascii-hero");
+      if (!hero) return;
+
+      pre.style.transform = "scale(1)";
+
+      const contentW = pre.scrollWidth;
+      const contentH = pre.scrollHeight;
+
+      const padding = 20;
+      // Limit width to max 1280px or 85% of browser, whichever is less
+      const maxWidth = Math.min(1280, hero.clientWidth * 0.85);
+      const availW = Math.max(0, maxWidth - padding * 2);
+      const availH = Math.max(0, hero.clientHeight - padding * 2);
+
+      if (contentW === 0 || contentH === 0 || availW === 0 || availH === 0) return;
+
+      const scale = Math.min(availW / contentW, availH / contentH);
+      pre.style.transform = `scale(${scale})`;
+    }
+
+    function tick() {
+      if (!fontReady || !pre || Object.keys(glyphCache).length === 0) {
+        return;
+      }
+
+      const now = Date.now();
+      const diff = TARGET - now;
+
+      const { weeks, days, hours, minutes, seconds, milliseconds } = breakdown(diff);
+
+      // WW:DD:HH:MM:SS:MS format
+      const ww = pad(weeks, 2);
+      const dd = pad(days, 2);
+      const hh = pad(hours, 2);
+      const mm = pad(minutes, 2);
+      const ss = pad(seconds, 2);
+      const ms2 = pad(Math.floor(milliseconds / 10), 2);
+
+      const timeStr = `${ww}:${dd}:${hh}:${mm}:${ss}:${ms2}`;
+
+      // Render using fixed-width glyphs
+      const ascii = renderFixedWidth(timeStr);
+      const labels = generateLabels();
+
+      // Clear and rebuild with labels
+      pre.innerHTML = '';
+
+      // Add labels with blinking effect
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'crt-blink';
+      labelSpan.textContent = labels;
+      pre.appendChild(labelSpan);
+
+      // Add line break
+      pre.appendChild(document.createTextNode('\n\n'));
+
+      // Add countdown
+      pre.appendChild(document.createTextNode(ascii));
+
+      fitToHero();
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", function() {
+      setTimeout(fitToHero, 50);
+    });
+
+    // Start initialization
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>

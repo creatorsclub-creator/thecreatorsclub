@@ -1,0 +1,146 @@
+  <script src="https://cdn.jsdelivr.net/npm/figlet@1.7.0/lib/figlet.js"></script>
+  <script>
+  (function() {
+    // Target time: 7pm on March 28th 2026, Taiwan time (UTC+08:00)
+    const TARGET = new Date("2026-03-28T19:00:00+08:00").getTime();
+
+    // Font to use - change this to try different fonts
+    // Options: "Standard", "Big", "Banner", "Slant", "Small", "Doom", "Epic", "Ogre", "Digital"
+    const FONT_NAME = "alligator2";
+
+    let pre = null;
+    let fontReady = false;
+    let lastTimeStr = "";
+    let cachedAscii = "";
+
+    // Wait for DOM and initialize
+    function init() {
+      pre = document.getElementById("asciiCountdown");
+      if (!pre) {
+        // Retry if element not found yet
+        setTimeout(init, 100);
+        return;
+      }
+
+      pre.textContent = "Loading font...";
+      loadFont();
+    }
+
+    function loadFont() {
+    const fontUrl = `https://unpkg.com/figlet@1.7.0/fonts/${encodeURIComponent(FONT_NAME)}.flf`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    fetch(fontUrl, { signal: controller.signal, mode: "cors" })
+      .then(res => {
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error(`Font fetch failed: ${res.status} ${res.statusText}`);
+        return res.text();
+      })
+      .then(fontData => {
+        figlet.parseFont(FONT_NAME, fontData);
+        fontReady = true;
+        tick();
+      })
+      .catch(err => {
+        console.error("Font load error:", err);
+        pre.textContent = "Font load error (check console/CSP).";
+      });
+  }
+
+    function pad(num, width) {
+      const s = String(num);
+      return s.length >= width ? s : ('0'.repeat(width - s.length) + s);
+    }
+
+    function breakdown(ms) {
+      if (ms < 0) ms = 0;
+
+      const totalSeconds = Math.floor(ms / 1000);
+      const milliseconds = ms % 1000;
+
+      const seconds = totalSeconds % 60;
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const minutes = totalMinutes % 60;
+      const totalHours = Math.floor(totalMinutes / 60);
+      const hours = totalHours % 24;
+      const totalDays = Math.floor(totalHours / 24);
+
+      const weeks = Math.floor(totalDays / 7);
+      const days = totalDays % 7;
+
+      return { weeks, days, hours, minutes, seconds, milliseconds };
+    }
+
+    // Fit the <pre> to its hero container
+    function fitToHero() {
+      const hero = pre.closest(".ascii-hero");
+      if (!hero) return;
+
+      pre.style.transform = "scale(1)";
+
+      const contentW = pre.scrollWidth;
+      const contentH = pre.scrollHeight;
+
+      const padding = 20;
+      const availW = Math.max(0, hero.clientWidth - padding * 2);
+      const availH = Math.max(0, hero.clientHeight - padding * 2);
+
+      if (contentW === 0 || contentH === 0 || availW === 0 || availH === 0) return;
+
+      const scale = Math.min(availW / contentW, availH / contentH);
+      pre.style.transform = `scale(${scale})`;
+    }
+
+    function tick() {
+      if (!fontReady || !pre) {
+        return;
+      }
+
+      const now = Date.now();
+      const diff = TARGET - now;
+
+      const { weeks, days, hours, minutes, seconds, milliseconds } = breakdown(diff);
+
+      // WW:DD:HH:MM:SS:MS format
+      const ww = pad(weeks, 2);
+      const dd = pad(days, 2);
+      const hh = pad(hours, 2);
+      const mm = pad(minutes, 2);
+      const ss = pad(seconds, 2);
+      const ms2 = pad(Math.floor(milliseconds / 10), 2);
+
+      const timeStr = `${ww}:${dd}:${hh}:${mm}:${ss}:${ms2}`;
+
+      // Only re-render when string changes
+      if (timeStr !== lastTimeStr) {
+        lastTimeStr = timeStr;
+
+        try {
+          // Use figlet's native rendering for proper smushing/kerning
+          cachedAscii = figlet.textSync(timeStr, { font: FONT_NAME });
+        } catch (e) {
+          console.error("Figlet render error:", e);
+          cachedAscii = timeStr;
+        }
+      }
+
+      pre.textContent = cachedAscii;
+
+      fitToHero();
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", function() {
+      setTimeout(fitToHero, 50);
+    });
+
+    // Start initialization
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>

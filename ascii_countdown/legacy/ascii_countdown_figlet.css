@@ -1,0 +1,57 @@
+<style>
+  /* Hero container */
+  .ascii-hero {
+    width: 100%;
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Webflow embed fix */
+  .ascii-hero .w-embed,
+  .ascii-hero .w-embed:before,
+  .ascii-hero .w-embed:after {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* The <pre> itself */
+  #asciiCountdown {
+    margin: 0;
+    padding: 0;
+    white-space: pre;
+    display: block;
+
+    /* font rendering */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 14px;
+    line-height: 1.1;
+
+    /* colour with moderate GPU-accelerated neon glow - reduced intensity */
+    color: #ff2b2b;
+    filter:
+      drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))
+      drop-shadow(0 0 20px rgba(255, 0, 0, 0.6))
+      drop-shadow(0 0 00px rgba(255, 0, 0, 0.4));
+    text-shadow:
+      0 0 5px rgba(255, 43, 43, 0.8),
+      0 0 10px rgba(255, 43, 43, 0.6);
+
+    /* scaling */
+    transform-origin: center center;
+    will-change: transform;
+
+    /* avoid weird glyph behaviour */
+    font-variant-ligatures: none;
+    -webkit-font-smoothing: none;
+    text-rendering: geometricPrecision;
+
+    /* stop scrollbars */
+    overflow: visible;
+  }
+</style>

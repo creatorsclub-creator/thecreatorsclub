@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASCII Countdown Mobile - Vertical Layout</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+    }
+
+    /* Hero container */
+    .ascii-hero {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-left: 25px;
+      background: #000;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* The <pre> itself */
+    #asciiCountdown {
+      margin: 0;
+      padding: 0;
+      white-space: pre;
+      display: block;
+
+      /* font rendering */
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 7px;
+      line-height: 1.1;
+
+      /* colour with moderate GPU-accelerated neon glow - reduced intensity */
+      color: #ff2b2b;
+      filter:
+        drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))
+        drop-shadow(0 0 20px rgba(255, 0, 0, 0.6))
+        drop-shadow(0 0 40px rgba(255, 0, 0, 0.4));
+      text-shadow:
+        0 0 5px rgba(255, 43, 43, 0.8),
+        0 0 10px rgba(255, 43, 43, 0.6);
+
+      /* scaling */
+      transform-origin: left center;
+      will-change: transform;
+
+      /* avoid weird glyph behaviour */
+      font-variant-ligatures: none;
+      -webkit-font-smoothing: none;
+      text-rendering: geometricPrecision;
+
+      /* stop scrollbars */
+      overflow: visible;
+
+      /* CRT flicker animation on everything */
+      animation: crt-flicker 2s infinite;
+    }
+
+    /* CRT blinking effect for labels */
+    .crt-blink {
+      animation: crt-flicker 2s infinite;
+      opacity: 1;
+    }
+
+    @keyframes crt-flicker {
+      0% { opacity: 1; }
+      2% { opacity: 0.97; }
+      4% { opacity: 1; }
+      6% { opacity: 0.92; }
+      8% { opacity: 1; }
+      10% { opacity: 0.96; }
+      12% { opacity: 1; }
+      20% { opacity: 0.98; }
+      22% { opacity: 0.9; }
+      24% { opacity: 1; }
+      26% { opacity: 0.95; }
+      28% { opacity: 1; }
+      45% { opacity: 1; }
+      47% { opacity: 0.91; }
+      49% { opacity: 1; }
+      52% { opacity: 0.96; }
+      54% { opacity: 1; }
+      70% { opacity: 1; }
+      72% { opacity: 0.88; }
+      73% { opacity: 0.97; }
+      74% { opacity: 0.9; }
+      75% { opacity: 1; }
+      85% { opacity: 1; }
+      87% { opacity: 0.94; }
+      89% { opacity: 1; }
+      100% { opacity: 1; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="ascii-hero">
+    <pre id="asciiCountdown">Loading...</pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/figlet@1.7.0/lib/figlet.js"></script>
+  <script>
+  (function() {
+    // Target time: 7pm on March 28th 2026, Taiwan time (UTC+08:00)
+    const TARGET = new Date("2026-03-28T19:00:00+08:00").getTime();
+
+    // Font to use
+    const FONT_NAME = "basic";
+
+    let pre = null;
+    let fontReady = false;
+    let glyphCache = {};
+    let glyphHeight = 0;
+    let glyphWidth = 0;
+
+    // Wait for DOM and initialize
+    function init() {
+      pre = document.getElementById("asciiCountdown");
+      if (!pre) {
+        setTimeout(init, 100);
+        return;
+      }
+
+      pre.textContent = "Loading font...";
+      loadFont();
+    }
+
+    function loadFont() {
+      const fontUrl = `https://unpkg.com/figlet@1.7.0/fonts/${encodeURIComponent(FONT_NAME)}.flf`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+
+      fetch(fontUrl, { signal: controller.signal, mode: "cors" })
+        .then(res => {
+          clearTimeout(timeout);
+          if (!res.ok) throw new Error(`Font fetch failed: ${res.status} ${res.statusText}`);
+          return res.text();
+        })
+        .then(fontData => {
+          figlet.parseFont(FONT_NAME, fontData);
+          fontReady = true;
+          buildFixedWidthGlyphs();
+          tick();
+        })
+        .catch(err => {
+          console.error("Font load error:", err);
+          pre.textContent = "Font load error (check console/CSP).";
+        });
+    }
+
+    // Pre-render all characters as fixed-width glyphs
+    function buildFixedWidthGlyphs() {
+      try {
+        const chars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':'];
+        let maxWidth = 0;
+
+        // First pass: render each character and find max width
+        const renderedChars = {};
+        for (const ch of chars) {
+          const ascii = figlet.textSync(ch, { font: FONT_NAME });
+          const lines = ascii.split('\n');
+          renderedChars[ch] = lines;
+
+          // Find the widest line in this character
+          for (const line of lines) {
+            maxWidth = Math.max(maxWidth, line.length);
+          }
+
+          glyphHeight = Math.max(glyphHeight, lines.length);
+        }
+
+        glyphWidth = maxWidth;
+
+        // Second pass: pad all characters to the same width
+        for (const ch of chars) {
+          const lines = renderedChars[ch];
+          const paddedLines = [];
+
+          // Pad height
+          while (lines.length < glyphHeight) {
+            lines.push('');
+          }
+
+          // Pad width on each line and replace spaces with nbsp to prevent browser trimming
+          for (const line of lines) {
+            let padded;
+
+            // Center colons by adding padding on both sides
+            if (ch === ':') {
+              const trimmedLength = line.trimEnd().length;
+              const totalPadding = maxWidth - trimmedLength;
+              const leftPadding = Math.floor(totalPadding / 2);
+              const rightPadding = totalPadding - leftPadding;
+              padded = ' '.repeat(leftPadding) + line.trimEnd() + ' '.repeat(rightPadding);
+            } else {
+              // Left-align other characters
+              padded = line.padEnd(maxWidth, ' ');
+            }
+
+            // Replace all spaces with nbsp to prevent any trimming
+            padded = padded.replace(/ /g, '\u00A0');
+            paddedLines.push(padded);
+          }
+
+          glyphCache[ch] = paddedLines;
+        }
+
+        console.log('Glyph width:', glyphWidth, 'height:', glyphHeight);
+        console.log('Glyph cache:', glyphCache);
+
+        // Initial fit
+        fitToHero();
+      } catch (e) {
+        console.error("Error building fixed-width glyphs:", e);
+      }
+    }
+
+    // Render a single segment (2 digits) vertically with its label
+    function renderSegment(label, digit1, digit2) {
+      const lines = [];
+
+      // Add label (centered)
+      const labelPadding = Math.floor((glyphWidth * 2 - label.length) / 2);
+      const labelLine = ' '.repeat(labelPadding) + label + ' '.repeat(glyphWidth * 2 - labelPadding - label.length);
+      lines.push(labelLine.replace(/ /g, '\u00A0'));
+      lines.push(''); // Blank line after label
+
+      // Render the two digits side by side
+      const glyph1 = glyphCache[digit1] || glyphCache['0'];
+      const glyph2 = glyphCache[digit2] || glyphCache['0'];
+
+      for (let i = 0; i < glyphHeight; i++) {
+        lines.push(glyph1[i] + glyph2[i]);
+      }
+
+      return lines.join('\n');
+    }
+
+    function pad(num, width) {
+      const s = String(num);
+      return s.length >= width ? s : ('0'.repeat(width - s.length) + s);
+    }
+
+    function breakdown(ms) {
+      if (ms < 0) ms = 0;
+
+      const totalSeconds = Math.floor(ms / 1000);
+      const milliseconds = ms % 1000;
+
+      const seconds = totalSeconds % 60;
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const minutes = totalMinutes % 60;
+      const totalHours = Math.floor(totalMinutes / 60);
+      const hours = totalHours % 24;
+      const totalDays = Math.floor(totalHours / 24);
+
+      const weeks = Math.floor(totalDays / 7);
+      const days = totalDays % 7;
+
+      return { weeks, days, hours, minutes, seconds, milliseconds };
+    }
+
+    // Fit the <pre> to its hero container
+    function fitToHero() {
+      const hero = pre.closest(".ascii-hero");
+      if (!hero) return;
+
+      pre.style.transform = "scale(1)";
+
+      const contentW = pre.scrollWidth;
+      const contentH = pre.scrollHeight;
+
+      const padding = 20;
+      // Limit width to max 100px
+      const maxWidth = 100;
+      // Limit height to max 85% of screen height
+      const maxHeight = hero.clientHeight * 0.85;
+      const availW = Math.max(0, maxWidth - padding * 2);
+      const availH = Math.max(0, maxHeight - padding * 2);
+
+      if (contentW === 0 || contentH === 0 || availW === 0 || availH === 0) return;
+
+      const scale = Math.min(availW / contentW, availH / contentH);
+      pre.style.transform = `scale(${scale})`;
+    }
+
+    function tick() {
+      if (!fontReady || !pre || Object.keys(glyphCache).length === 0) {
+        return;
+      }
+
+      const now = Date.now();
+      const diff = TARGET - now;
+
+      const { weeks, days, hours, minutes, seconds, milliseconds } = breakdown(diff);
+
+      // Format each segment
+      const ww = pad(weeks, 2);
+      const dd = pad(days, 2);
+      const hh = pad(hours, 2);
+      const mm = pad(minutes, 2);
+      const ss = pad(seconds, 2);
+      const ms2 = pad(Math.floor(milliseconds / 10), 2);
+
+      // Render each segment vertically (reversed order: seconds at top, weeks at bottom)
+      const segments = [
+        renderSegment('_MILISCOND[S]', ms2[0], ms2[1]),
+        renderSegment('_SECOND[S]', ss[0], ss[1]),
+        renderSegment('_MINUTE[S]', mm[0], mm[1]),
+        renderSegment('_HOUR[S]', hh[0], hh[1]),
+        renderSegment('_DAY[S]', dd[0], dd[1]),
+        renderSegment('_WEEK[S]', ww[0], ww[1])
+      ];
+
+      // Join segments with more spacing between them
+      pre.textContent = segments.join('\n\n\n\n\n\n\n\n\n\n');
+
+      fitToHero();
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", function() {
+      setTimeout(fitToHero, 50);
+    });
+
+    // Start initialization
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>

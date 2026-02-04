@@ -671,62 +671,6 @@
       osc.stop(now + 0.2);
     }
 
-    // Data trickle sound for loading bar
-    let dataTrickleInterval = null;
-    function startDataTrickle() {
-      if (!audioCtx) return;
-      // Random short blips at irregular intervals
-      function playTrickle() {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        // Random frequency between 2000-4000 Hz for data-like sound
-        osc.frequency.value = 2000 + Math.random() * 2000;
-        osc.type = 'square';
-        const now = audioCtx.currentTime;
-        const volume = 0.008 + Math.random() * 0.012; // Vary volume slightly
-        gain.gain.setValueAtTime(volume, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.02);
-      }
-      // Play trickles at random intervals (30-100ms)
-      function scheduleTrickle() {
-        playTrickle();
-        const delay = 30 + Math.random() * 70;
-        dataTrickleInterval = setTimeout(scheduleTrickle, delay);
-      }
-      scheduleTrickle();
-    }
-
-    function stopDataTrickle() {
-      if (dataTrickleInterval) {
-        clearTimeout(dataTrickleInterval);
-        dataTrickleInterval = null;
-      }
-    }
-
-    function playTransmissionComplete() {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-      // Three-tone ascending chime
-      const frequencies = [523, 659, 784]; // C5, E5, G5
-      frequencies.forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        const startTime = now + i * 0.12;
-        gain.gain.setValueAtTime(0.04, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(startTime);
-        osc.stop(startTime + 0.3);
-      });
-    }
-
     // DOM elements
     let countdownHero = null;
     let enterPrompt = null;
@@ -748,9 +692,6 @@
       const baseHTML = staticContent.innerHTML;
       let currentChunk = 0;
 
-      // Start data trickle sound
-      startDataTrickle();
-
       function updateBar() {
         const filled = filledChar.repeat(currentChunk);
         const empty = emptyChar.repeat(totalChunks - currentChunk);
@@ -766,8 +707,6 @@
           updateBar();
           setTimeout(fillNextChunk, chunkDelay);
         } else {
-          // Stop data trickle sound
-          stopDataTrickle();
           if (callback) callback();
         }
       }
@@ -855,15 +794,6 @@
 
       document.addEventListener('keydown', handleKeyPress);
       document.addEventListener('paste', handlePaste);
-
-      // Start ambient hum on first user interaction (click or keypress)
-      function startAudioOnInteraction() {
-        initAudio();
-        document.removeEventListener('click', startAudioOnInteraction);
-        document.removeEventListener('keydown', startAudioOnInteraction);
-      }
-      document.addEventListener('click', startAudioOnInteraction);
-      document.addEventListener('keydown', startAudioOnInteraction);
 
       const closeBtn = document.getElementById('closeBtn');
       if (closeBtn) {
@@ -972,6 +902,7 @@
       if (currentPhase === PHASE_INITIAL) {
         if (event.key === 'Enter') {
           event.preventDefault();
+          initAudio();
           playEnterSound();
           spawnWindow();
         }
@@ -1241,7 +1172,6 @@
               setTimeout(() => {
                 staticContent.textContent = '';
                 inputLine.innerHTML = '';
-                playTransmissionComplete();
                 typewriterRender(t('complete'), false);
               }, 300);
             });
@@ -1253,7 +1183,6 @@
               setTimeout(() => {
                 staticContent.textContent = '';
                 inputLine.innerHTML = '';
-                playTransmissionComplete();
                 typewriterRender(t('complete'), false);
               }, 300);
             });

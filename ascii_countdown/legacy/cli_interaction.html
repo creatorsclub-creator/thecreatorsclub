@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creator CLI Interface</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* Main container */
+    .cli-hero {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+    /* Console window container */
+    .console-window {
+      max-width: 820px;
+      width: 100%;
+      font-family: Consolas, monospace;
+      font-size: 18px;
+      line-height: 1.2;
+      color: #ff2b2b;
+      filter:
+        drop-shadow(0 0 4px rgba(255, 0, 0, 0.5))
+        drop-shadow(0 0 12px rgba(255, 0, 0, 0.3));
+      text-shadow:
+        0 0 3px rgba(255, 43, 43, 0.5),
+        0 0 8px rgba(255, 43, 43, 0.3);
+      font-variant-ligatures: none;
+      -webkit-font-smoothing: none;
+      text-rendering: geometricPrecision;
+      animation: crt-flicker 2s infinite;
+    }
+
+    /* ASCII window frame (top and bottom) */
+    .window-frame,
+    .window-frame-bottom {
+      margin: 0;
+      padding: 0;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: 1.2;
+      color: inherit;
+      white-space: pre;
+      display: block;
+    }
+
+    /* Console body with side borders */
+    .console-body {
+      display: flex;
+      background: #000;
+    }
+
+    .console-body .side-border {
+      flex-shrink: 0;
+      white-space: pre;
+    }
+
+    .console-body .content-area {
+      flex-grow: 1;
+      min-height: 300px;
+      padding: 10px 0;
+      overflow: hidden;
+    }
+
+    /* CLI terminal */
+    #cliTerminal {
+      margin: 0;
+      padding: 10px;
+      white-space: pre-wrap;
+      display: block;
+      width: 100%;
+
+      /* font rendering */
+      font-family: inherit;
+      font-size: inherit;
+      line-height: 1.6;
+      color: inherit;
+    }
+
+    /* CRT flicker animation */
+    @keyframes crt-flicker {
+      0% { opacity: 1; }
+      2% { opacity: 0.97; }
+      4% { opacity: 1; }
+      6% { opacity: 0.92; }
+      8% { opacity: 1; }
+      10% { opacity: 0.96; }
+      12% { opacity: 1; }
+      20% { opacity: 0.98; }
+      22% { opacity: 0.9; }
+      24% { opacity: 1; }
+      26% { opacity: 0.95; }
+      28% { opacity: 1; }
+      45% { opacity: 1; }
+      47% { opacity: 0.91; }
+      49% { opacity: 1; }
+      52% { opacity: 0.96; }
+      54% { opacity: 1; }
+      70% { opacity: 1; }
+      72% { opacity: 0.88; }
+      73% { opacity: 0.97; }
+      74% { opacity: 0.9; }
+      75% { opacity: 1; }
+      85% { opacity: 1; }
+      87% { opacity: 0.94; }
+      89% { opacity: 1; }
+      100% { opacity: 1; }
+    }
+
+    /* Cursor blink animation */
+    @keyframes cursor-blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .cursor {
+      animation: cursor-blink 530ms infinite;
+      display: inline;
+    }
+
+    .terminal-line {
+      margin: 0.5em 0;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="cli-hero">
+    <div class="console-window">
+      <pre class="window-frame">╔══════════════════════════════════════════════════════════════════════════════╗
+║  ════════════════════════════════════════════════════════════════  ○  ○  ○   ║
+╠══════════════════════════════════════════════════════════════════════════════╣</pre>
+      <div class="console-body">
+        <span class="side-border">║  </span>
+        <div class="content-area">
+          <pre id="cliTerminal"><span id="staticContent"></span><span id="inputLine"></span></pre>
+        </div>
+        <span class="side-border">  ║</span>
+      </div>
+      <pre class="window-frame-bottom">╚══════════════════════════════════════════════════════════════════════════════╝</pre>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    // Phase constants
+    const PHASE_PRESS_ENTER = 0;
+    const PHASE_TERMINAL_SIM = 1;
+    const PHASE_NAME_PROMPT = 2;
+    const PHASE_DESCRIPTION = 3;
+    const PHASE_LINK_PROMPT = 4;
+    const PHASE_EMAIL_PROMPT = 5;
+    const PHASE_COMPLETE = 6;
+
+    // Typing speed: 200 characters per minute = 300ms per character
+    const TYPE_DELAY = 5;
+
+    // State
+    let currentPhase = PHASE_PRESS_ENTER;
+    let userInput = { name: '', link: '', email: '' };
+    let inputBuffer = '';
+    let terminalLines = [];
+    let terminal = null;
+    let consoleWindow = null;
+    let staticContent = null;
+    let inputLine = null;
+    let isTyping = false; // Flag to track if typewriter effect is in progress
+
+    // Initialize
+    function init() {
+      terminal = document.getElementById('cliTerminal');
+      consoleWindow = document.querySelector('.console-window');
+      staticContent = document.getElementById('staticContent');
+      inputLine = document.getElementById('inputLine');
+      if (!terminal || !consoleWindow || !staticContent || !inputLine) {
+        setTimeout(init, 100);
+        return;
+      }
+
+      // Start with press enter prompt
+      typewriterRender('Press ENTER to continue', true);
+
+      // Add keyboard listener
+      document.addEventListener('keydown', handleKeyPress);
+
+      // Add paste listener
+      document.addEventListener('paste', handlePaste);
+    }
+
+    // Handle paste events
+    function handlePaste(event) {
+      if (currentPhase === PHASE_NAME_PROMPT ||
+          currentPhase === PHASE_LINK_PROMPT ||
+          currentPhase === PHASE_EMAIL_PROMPT) {
+        event.preventDefault();
+        const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+        // Remove newlines from pasted text
+        const cleanText = pastedText.replace(/[\r\n]/g, '');
+        inputBuffer += cleanText;
+        render();
+      }
+    }
+
+    // Handle keyboard input
+    function handleKeyPress(event) {
+      // Ignore input while typewriter effect is running
+      if (isTyping) {
+        event.preventDefault();
+        return;
+      }
+
+      if (currentPhase === PHASE_PRESS_ENTER) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          transitionPhase(PHASE_TERMINAL_SIM);
+        }
+      } else if (currentPhase === PHASE_NAME_PROMPT ||
+                 currentPhase === PHASE_LINK_PROMPT ||
+                 currentPhase === PHASE_EMAIL_PROMPT) {
+
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          // Store input and transition to next phase
+          if (currentPhase === PHASE_NAME_PROMPT) {
+            userInput.name = inputBuffer;
+            inputBuffer = '';
+            transitionPhase(PHASE_DESCRIPTION);
+          } else if (currentPhase === PHASE_LINK_PROMPT) {
+            userInput.link = inputBuffer;
+            inputBuffer = '';
+            transitionPhase(PHASE_EMAIL_PROMPT);
+          } else if (currentPhase === PHASE_EMAIL_PROMPT) {
+            userInput.email = inputBuffer;
+            inputBuffer = '';
+            blinkScreen();
+          }
+        } else if (event.key === 'Backspace') {
+          event.preventDefault();
+          inputBuffer = inputBuffer.slice(0, -1);
+          render();
+        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          // Only capture printable characters
+          event.preventDefault();
+          inputBuffer += event.key;
+          render();
+        }
+      }
+    }
+
+    // Typewriter effect for displaying text
+    function typewriterRender(text, showCursor = false, callback = null) {
+      isTyping = true;
+      let charIndex = 0;
+      staticContent.textContent = '';
+      inputLine.innerHTML = showCursor ? '<span class="cursor">_</span>' : '';
+
+      function typeNextChar() {
+        if (charIndex < text.length) {
+          staticContent.textContent = text.substring(0, charIndex + 1);
+          charIndex++;
+          setTimeout(typeNextChar, TYPE_DELAY);
+        } else {
+          isTyping = false;
+          if (callback) callback();
+        }
+      }
+
+      typeNextChar();
+    }
+
+    // Typewriter effect for multiple lines
+    function typewriterLines(lines, callback = null) {
+      isTyping = true;
+      let lineIndex = 0;
+      let charIndex = 0;
+      let displayedLines = [];
+      inputLine.innerHTML = '';
+
+      function typeNextChar() {
+        if (lineIndex < lines.length) {
+          const currentLine = lines[lineIndex];
+
+          if (charIndex < currentLine.length) {
+            // Still typing current line
+            const partialLine = currentLine.substring(0, charIndex + 1);
+            const html = [...displayedLines, partialLine].map(line =>
+              `<div class="terminal-line">${line}</div>`
+            ).join('');
+            staticContent.innerHTML = html;
+            charIndex++;
+            setTimeout(typeNextChar, TYPE_DELAY);
+          } else {
+            // Line complete, move to next
+            displayedLines.push(currentLine);
+            lineIndex++;
+            charIndex = 0;
+            if (lineIndex < lines.length) {
+              setTimeout(typeNextChar, TYPE_DELAY);
+            } else {
+              isTyping = false;
+              if (callback) callback();
+            }
+          }
+        }
+      }
+
+      typeNextChar();
+    }
+
+    // Transition between phases
+    function transitionPhase(newPhase) {
+      currentPhase = newPhase;
+
+      if (newPhase === PHASE_TERMINAL_SIM) {
+        simulateTerminalCommands();
+      } else if (newPhase === PHASE_NAME_PROMPT) {
+        typewriterRender('Name: ', false, () => {
+          inputBuffer = '';
+          inputLine.innerHTML = '<span class="cursor">_</span>';
+        });
+      } else if (newPhase === PHASE_DESCRIPTION) {
+        // Append user's name to static content, then type the description
+        inputLine.innerHTML = '';
+        const baseText = `Name: ${userInput.name}`;
+        const newText = `\n\nYour creativity is your ticket.\nPlease input your best work.`;
+        staticContent.textContent = baseText;
+        typewriterAppend(newText, false, () => {
+          setTimeout(() => {
+            transitionPhase(PHASE_LINK_PROMPT);
+          }, 1000);
+        });
+      } else if (newPhase === PHASE_LINK_PROMPT) {
+        const newText = `\n\nLink: `;
+        typewriterAppend(newText, false, () => {
+          inputBuffer = '';
+          inputLine.innerHTML = '<span class="cursor">_</span>';
+        });
+      } else if (newPhase === PHASE_EMAIL_PROMPT) {
+        // Append user's link to static content, then type "Email: "
+        inputLine.innerHTML = '';
+        staticContent.textContent += userInput.link;
+        const newText = `\n\nEmail: `;
+        typewriterAppend(newText, false, () => {
+          inputBuffer = '';
+          inputLine.innerHTML = '<span class="cursor">_</span>';
+        });
+      } else if (newPhase === PHASE_COMPLETE) {
+        inputLine.innerHTML = '';
+        staticContent.textContent += userInput.email;
+        const newText = `\n\nWe will be in touch, Creator.`;
+        typewriterAppend(newText, false);
+      } else {
+        render();
+      }
+    }
+
+    // Typewriter effect that appends to existing static content
+    function typewriterAppend(text, showCursor = false, callback = null) {
+      isTyping = true;
+      let charIndex = 0;
+      const baseContent = staticContent.textContent;
+
+      function typeNextChar() {
+        if (charIndex < text.length) {
+          staticContent.textContent = baseContent + text.substring(0, charIndex + 1);
+          charIndex++;
+          setTimeout(typeNextChar, TYPE_DELAY);
+        } else {
+          isTyping = false;
+          if (callback) callback();
+        }
+      }
+
+      typeNextChar();
+    }
+
+    // Simulate terminal commands sequentially with typewriter effect
+    function simulateTerminalCommands() {
+      const commands = [
+        'boot_seq//init...',
+        'loading cr34t0r_m4tr1x.sys ............ [OK]',
+        'mem::alloc>>',
+        'establishing upstream connection to ///VOID_NETWORK/// ..... please stand by .....',
+        'decrypt{auth_layer_7}',
+        'scanning for creative signatures in local sector..............................................................done',
+        'ping',
+        'sync//:heartbeat>>',
+        '[WARN] high talent density detected in your region;;;re-calibrating intake thresholds...',
+        'val1dat3_n0de=TRUE',
+        'opening submission_portal v0.7.2-beta///',
+        'READY.',
+        'aw4iting input>>_'
+      ];
+
+      typewriterLines(commands, () => {
+        setTimeout(() => {
+          transitionPhase(PHASE_NAME_PROMPT);
+        }, 500);
+      });
+    }
+
+    // Submit data to Google Sheet
+    function submitToGoogleSheet() {
+      const url = 'https://script.google.com/macros/s/AKfycbxy2w6a7h2raxlPCRuJrwds12TK-KzUU4Dzg39YuCWIXavXg-aAD9Jd_eHr_-tStGMO2A/exec';
+
+      fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: userInput.name,
+          link: userInput.link,
+          email: userInput.email
+        })
+      }).catch(err => {
+        console.error('Submission error:', err);
+      });
+    }
+
+    // Screen blink effect
+    function blinkScreen() {
+      // Submit data to Google Sheet
+      submitToGoogleSheet();
+
+      // Fade out the entire console window
+      consoleWindow.style.transition = 'opacity 100ms';
+      consoleWindow.style.opacity = '0';
+
+      setTimeout(() => {
+        // Fade in
+        consoleWindow.style.opacity = '1';
+
+        setTimeout(() => {
+          // Reset transition and show final message
+          consoleWindow.style.transition = '';
+          transitionPhase(PHASE_COMPLETE);
+        }, 100);
+      }, 100);
+    }
+
+    // Render just the input line (static content stays unchanged)
+    function render() {
+      // Only render if not in typewriter mode
+      if (isTyping) return;
+
+      // Only update the input line, static content is preserved
+      inputLine.innerHTML = `${inputBuffer}<span class="cursor">_</span>`;
+    }
+
+    // Start when DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>
