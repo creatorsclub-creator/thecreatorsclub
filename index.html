@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creator CLI Interface</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      min-height: 100vh;
+      font-family: Consolas, monospace;
+      overflow: hidden;
+    }
+
+    .cli-hero {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+    /* =============================================
+       DESIGN 4: CSS Micro-Dashed Double Line
+
+       EDITABLE VALUES:
+       - Line thickness: change "2px" in background-size (currently 2px)
+       - Visible line length: change first "10px" values in gradients
+       - Gap size: change "10.2px" values (visible + gap = 10 + 0.2 = 10.2)
+       - Gap between double lines: change "inset: 4px" (currently 4px spacing)
+       ============================================= */
+    .css-dashed-window {
+      max-width: 820px;
+      width: 100%;
+      background: #000;
+      position: relative;
+      padding: 2px;
+      filter:
+        drop-shadow(0 0 2px rgba(255, 0, 0, 0.4))
+        drop-shadow(0 0 5px rgba(255, 0, 0, 0.25))
+        drop-shadow(0 0 10px rgba(255, 0, 0, 0.15));
+      animation: crt-flicker 2s infinite, phosphor-pulse 4s ease-in-out infinite;
+    }
+
+    /* Outer border */
+    .css-dashed-window::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid #ff2b2b;
+      pointer-events: none;
+    }
+
+    /* Inner border */
+    .css-dashed-window::after {
+      content: '';
+      position: absolute;
+      inset: 3px; /* Gap between double lines */
+      border: 1px solid #ff2b2b;
+      pointer-events: none;
+    }
+
+    .css-dashed-window .inner-wrapper {
+      position: relative;
+      z-index: 1;
+      background: #000;
+      margin: 3px;
+    }
+
+    /* Scanlines overlay */
+    .css-dashed-window .inner-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Noise/grain overlay + vignette */
+    .css-dashed-window .inner-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        /* Vignette */
+        radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.4) 100%),
+        /* Noise */
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-blend-mode: normal;
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    .css-dashed-window .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 15px;
+      background: #1a1a4a;
+      position: relative;
+    }
+
+    /* Titlebar bottom borders */
+    .css-dashed-window .titlebar::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: #ff2b2b;
+    }
+
+    .css-dashed-window .titlebar::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -3px;
+      height: 1px;
+      background: #ff2b2b;
+    }
+
+    .css-dashed-window .titlebar-title {
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      color: #ffffff;
+      text-shadow:
+        /* Chromatic aberration */
+        -0.5px 0 0 rgba(255, 100, 100, 0.4),
+        0.5px 0 0 rgba(100, 255, 255, 0.2),
+        /* White glow */
+        0 0 5px rgba(255, 255, 255, 0.8),
+        0 0 10px rgba(255, 255, 255, 0.6),
+        0 0 20px rgba(255, 255, 255, 0.4),
+        0 0 40px rgba(255, 200, 200, 0.2);
+      -webkit-font-smoothing: none;
+      font-variant-ligatures: none;
+    }
+
+    .css-dashed-window .titlebar-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .css-dashed-window .circle {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid;
+    }
+
+    .css-dashed-window .circle {
+      border-color: #ff2b2b;
+      box-shadow:
+        0 0 4px rgba(255, 43, 43, 0.5),
+        0 0 8px rgba(255, 43, 43, 0.3);
+    }
+
+    .css-dashed-window .circle.close-btn {
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .css-dashed-window .circle.close-btn:hover {
+      background: #ff2b2b;
+      box-shadow:
+        0 0 8px rgba(255, 43, 43, 0.8),
+        0 0 16px rgba(255, 43, 43, 0.5);
+    }
+
+    /* Desktop icon */
+    .desktop-icon {
+      position: fixed;
+      top: 30px;
+      left: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+      z-index: 100;
+    }
+
+    .desktop-icon.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .desktop-icon:hover .icon-box {
+      border-color: #ff5555;
+      box-shadow:
+        0 0 8px rgba(255, 43, 43, 0.6),
+        0 0 16px rgba(255, 43, 43, 0.3);
+    }
+
+    .desktop-icon .icon-box {
+      width: 48px;
+      height: 48px;
+      border: 1px solid #ff2b2b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Consolas, monospace;
+      font-size: 24px;
+      color: #ff2b2b;
+      text-shadow:
+        0 0 4px rgba(255, 43, 43, 0.8),
+        0 0 8px rgba(255, 43, 43, 0.4);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .desktop-icon .icon-label {
+      margin-top: 6px;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      color: #ff2b2b;
+      text-shadow:
+        0 0 4px rgba(255, 43, 43, 0.6);
+      text-align: center;
+      max-width: 80px;
+      word-break: break-all;
+    }
+
+    .css-dashed-window .body-scroll {
+      max-height: 400px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      margin-top: 3px;
+      scrollbar-width: thin;
+      scrollbar-color: #ff2b2b #1a1a1a;
+    }
+
+    .css-dashed-window .body-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .css-dashed-window .body-scroll::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    .css-dashed-window .body-scroll::-webkit-scrollbar-thumb {
+      background: #ff2b2b;
+      border-radius: 4px;
+    }
+
+    .css-dashed-window .body-content {
+      padding: 15px 20px;
+      font-family: Consolas, monospace;
+      font-size: 18px;
+      line-height: 1.4;
+      color: #ff2b2b;
+      text-shadow:
+        /* Chromatic aberration - subtle RGB split */
+        -0.5px 0 0 rgba(255, 0, 0, 0.5),
+        0.5px 0 0 rgba(0, 255, 255, 0.15),
+        /* Main glow - increased intensity */
+        0 0 3px rgba(255, 43, 43, 1),
+        0 0 6px rgba(255, 43, 43, 0.85),
+        0 0 12px rgba(255, 43, 43, 0.6),
+        0 0 25px rgba(255, 43, 43, 0.4),
+        0 0 50px rgba(255, 43, 43, 0.2);
+      /* Disable font smoothing for sharper CRT look */
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: grayscale;
+      font-variant-ligatures: none;
+    }
+
+    .css-dashed-window .body-content .line {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* CLI Terminal */
+    #cliTerminal {
+      margin: 0;
+      padding: 0;
+      white-space: pre-wrap;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: 1.6;
+      color: inherit;
+    }
+
+    .terminal-line {
+      margin: 0.3em 0;
+    }
+
+    /* Cursor blink animation */
+    @keyframes cursor-blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .cursor {
+      animation: cursor-blink 530ms infinite;
+      display: inline;
+    }
+
+    /* Loading bar line */
+    .loading-line {
+      margin: 0.3em 0;
+    }
+
+    /* Flavour text (dull red) */
+    .flavour {
+      color: #992222;
+      text-shadow:
+        -0.5px 0 0 rgba(153, 34, 34, 0.3),
+        0.5px 0 0 rgba(100, 50, 50, 0.1),
+        0 0 3px rgba(153, 34, 34, 0.5),
+        0 0 6px rgba(153, 34, 34, 0.3),
+        0 0 12px rgba(153, 34, 34, 0.15);
+    }
+
+    /* CRT flicker animation - subtle */
+    @keyframes crt-flicker {
+      0% { opacity: 1; }
+      2% { opacity: 0.98; }
+      4% { opacity: 1; }
+      6% { opacity: 0.96; }
+      8% { opacity: 1; }
+      10% { opacity: 0.98; }
+      12% { opacity: 1; }
+      20% { opacity: 0.99; }
+      22% { opacity: 0.95; }
+      24% { opacity: 1; }
+      26% { opacity: 0.97; }
+      28% { opacity: 1; }
+      45% { opacity: 1; }
+      47% { opacity: 0.96; }
+      49% { opacity: 1; }
+      52% { opacity: 0.98; }
+      54% { opacity: 1; }
+      70% { opacity: 1; }
+      72% { opacity: 0.94; }
+      73% { opacity: 0.98; }
+      74% { opacity: 0.95; }
+      75% { opacity: 1; }
+      85% { opacity: 1; }
+      87% { opacity: 0.97; }
+      89% { opacity: 1; }
+      100% { opacity: 1; }
+    }
+
+    /* Scanline effect */
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100vh); }
+    }
+
+    /* Phosphor glow pulse - subtle */
+    @keyframes phosphor-pulse {
+      0%, 100% {
+        filter:
+          drop-shadow(0 0 2px rgba(255, 0, 0, 0.4))
+          drop-shadow(0 0 5px rgba(255, 0, 0, 0.25))
+          drop-shadow(0 0 10px rgba(255, 0, 0, 0.15));
+      }
+      50% {
+        filter:
+          drop-shadow(0 0 3px rgba(255, 0, 0, 0.5))
+          drop-shadow(0 0 6px rgba(255, 0, 0, 0.3))
+          drop-shadow(0 0 12px rgba(255, 0, 0, 0.2));
+      }
+    }
+
+    /* Sweeping scanline */
+    @keyframes sweep {
+      0% { top: -10%; }
+      100% { top: 110%; }
+    }
+
+    .css-dashed-window .sweep-scanline {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      height: 4px;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(255, 43, 43, 0.15),
+        rgba(255, 255, 255, 0.05),
+        rgba(255, 43, 43, 0.15),
+        transparent
+      );
+      z-index: 20;
+      pointer-events: none;
+      animation: sweep 8s linear infinite;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Desktop Icon -->
+  <div class="desktop-icon" id="desktopIcon">
+    <div class="icon-box">▣</div>
+    <div class="icon-label">creators_club.exe</div>
+  </div>
+
+  <!-- CLI Interface Window -->
+  <div class="cli-hero" id="cliHero">
+    <div class="css-dashed-window">
+      <div class="sweep-scanline"></div>
+      <div class="inner-wrapper">
+        <div class="titlebar">
+          <span class="titlebar-title">creators_club.exe_></span>
+          <div class="titlebar-controls">
+            <div class="circle"></div>
+            <div class="circle"></div>
+            <div class="circle close-btn" id="closeBtn"></div>
+          </div>
+        </div>
+        <div class="body-scroll">
+          <div class="body-content">
+            <pre id="cliTerminal"><span id="staticContent"></span><span id="inputLine"></span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    // Phase constants
+    const PHASE_PRESS_ENTER = 0;
+    const PHASE_TERMINAL_SIM = 1;
+    const PHASE_NAME_PROMPT = 2;
+    const PHASE_DESCRIPTION = 3;
+    const PHASE_LINK_PROMPT = 4;
+    const PHASE_EMAIL_PROMPT = 5;
+    const PHASE_COMPLETE = 6;
+
+    // Typing speed
+    const TYPE_DELAY = 5;
+
+    // State
+    let currentPhase = PHASE_PRESS_ENTER;
+    let userInput = { name: '', link: '', email: '' };
+    let inputBuffer = '';
+    let staticContent = null;
+    let inputLine = null;
+    let consoleWindow = null;
+    let bodyScroll = null;
+    let isTyping = false;
+
+    // Auto-scroll to bottom
+    function scrollToBottom() {
+      if (bodyScroll) {
+        bodyScroll.scrollTop = bodyScroll.scrollHeight;
+      }
+    }
+
+    // Create and animate retro loading bar (ASCII style)
+    function showLoadingBar(callback) {
+      const totalChunks = 20;
+      const totalTime = 2100; // 2.1 seconds
+      const chunkDelay = totalTime / totalChunks;
+      const filledChar = '█';
+      const emptyChar = '░';
+
+      // Append loading line to static content
+      const baseHTML = staticContent.innerHTML;
+      let currentChunk = 0;
+
+      function updateBar() {
+        const filled = filledChar.repeat(currentChunk);
+        const empty = emptyChar.repeat(totalChunks - currentChunk);
+        const percent = Math.round((currentChunk / totalChunks) * 100);
+        const percentStr = percent.toString().padStart(3, ' ').replace(/ /g, '&nbsp;');
+        staticContent.innerHTML = baseHTML + `<br><br>uploading//: ${filled}${empty} ${percentStr}%`;
+        scrollToBottom();
+      }
+
+      function fillNextChunk() {
+        if (currentChunk < totalChunks) {
+          currentChunk++;
+          updateBar();
+          setTimeout(fillNextChunk, chunkDelay);
+        } else {
+          if (callback) callback();
+        }
+      }
+
+      updateBar();
+      setTimeout(fillNextChunk, chunkDelay);
+    }
+
+    // Creative console jargon content (flavour text)
+    const terminalCommands = [
+      'boot_seq//init...',
+      'loading cr34t0r_m4tr1x.sys ............ [OK]',
+      'mem::alloc>>',
+      'establishing upstream connection to ///VOID_NETWORK/// ..... please stand by .....',
+      'decrypt{auth_layer_7}',
+      'scanning for creative signatures in local sector..............................................................done',
+      'ping',
+      'sync//:heartbeat>>',
+      '[WARN] high talent density detected in your region;;;re-calibrating intake thresholds...',
+      'val1dat3_n0de=TRUE',
+      'opening submission_portal v0.7.2-beta///',
+      'READY.',
+      'aw4iting input>>_'
+    ];
+
+    // Loading feedback after name entry
+    const nameReceivedLines = [
+      'nam3_signal==received__uploading%%',
+      'parsing identity_matrix..................[OK]',
+      'cr3at0r_profile::initialized',
+      'nominal_principle=TRUE'
+    ];
+
+    // Loading feedback after link entry
+    const linkReceivedLines = [
+      'link::captured>>analyzing_payload...',
+      'scanning w0rk_signature for authenticity............',
+      'cr34tive_index=DETECTED;;;quality_threshold::PASSED',
+      '[OK] portfolio_node successfully mapped'
+    ];
+
+    // Loading feedback after email entry
+    const emailReceivedLines = [
+      'c0ntact_vector==established//',
+      'encrypting comm_channel..............[SECURE]',
+      'handshake::complete>>>',
+      'transmission_status=NOMINAL'
+    ];
+
+    // Initialize
+    function init() {
+      staticContent = document.getElementById('staticContent');
+      inputLine = document.getElementById('inputLine');
+      consoleWindow = document.querySelector('.css-dashed-window');
+      bodyScroll = document.querySelector('.body-scroll');
+
+      if (!staticContent || !inputLine || !consoleWindow || !bodyScroll) {
+        setTimeout(init, 100);
+        return;
+      }
+
+      // Start with press enter prompt
+      typewriterRender('Press ENTER to continue', true);
+
+      // Add keyboard listener
+      document.addEventListener('keydown', handleKeyPress);
+
+      // Add paste listener
+      document.addEventListener('paste', handlePaste);
+
+      // Add close button listener
+      const closeBtn = document.getElementById('closeBtn');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', closeWindow);
+      }
+
+      // Add desktop icon listener
+      const desktopIcon = document.getElementById('desktopIcon');
+      if (desktopIcon) {
+        desktopIcon.addEventListener('click', openWindow);
+      }
+    }
+
+    // Close window and show desktop icon
+    function closeWindow() {
+      const cliHero = document.getElementById('cliHero');
+      const desktopIcon = document.getElementById('desktopIcon');
+
+      // Fade out window
+      consoleWindow.style.transition = 'opacity 0.2s';
+      consoleWindow.style.opacity = '0';
+
+      setTimeout(() => {
+        cliHero.style.display = 'none';
+        consoleWindow.style.transition = '';
+        consoleWindow.style.opacity = '1';
+
+        // Show desktop icon
+        desktopIcon.classList.add('visible');
+      }, 200);
+    }
+
+    // Open window from desktop icon
+    function openWindow() {
+      const cliHero = document.getElementById('cliHero');
+      const desktopIcon = document.getElementById('desktopIcon');
+
+      // Hide desktop icon
+      desktopIcon.classList.remove('visible');
+
+      // Reset state
+      currentPhase = PHASE_PRESS_ENTER;
+      userInput = { name: '', link: '', email: '' };
+      inputBuffer = '';
+      isTyping = false;
+
+      // Reset terminal content
+      staticContent.textContent = '';
+      inputLine.innerHTML = '';
+
+      // Show window
+      consoleWindow.style.opacity = '0';
+      cliHero.style.display = 'flex';
+
+      setTimeout(() => {
+        consoleWindow.style.transition = 'opacity 0.2s';
+        consoleWindow.style.opacity = '1';
+
+        setTimeout(() => {
+          consoleWindow.style.transition = '';
+          // Start CLI sequence
+          typewriterRender('Press ENTER to continue', true);
+        }, 200);
+      }, 50);
+    }
+
+    // Handle paste events
+    function handlePaste(event) {
+      if (currentPhase === PHASE_NAME_PROMPT ||
+          currentPhase === PHASE_LINK_PROMPT ||
+          currentPhase === PHASE_EMAIL_PROMPT) {
+        event.preventDefault();
+        const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+        const cleanText = pastedText.replace(/[\r\n]/g, '');
+        inputBuffer += cleanText;
+        render();
+      }
+    }
+
+    // Handle keyboard input
+    function handleKeyPress(event) {
+      if (isTyping) {
+        event.preventDefault();
+        return;
+      }
+
+      if (currentPhase === PHASE_PRESS_ENTER) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          transitionPhase(PHASE_TERMINAL_SIM);
+        }
+      } else if (currentPhase === PHASE_NAME_PROMPT ||
+                 currentPhase === PHASE_LINK_PROMPT ||
+                 currentPhase === PHASE_EMAIL_PROMPT) {
+
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (currentPhase === PHASE_NAME_PROMPT) {
+            userInput.name = inputBuffer;
+            inputBuffer = '';
+            transitionPhase(PHASE_DESCRIPTION);
+          } else if (currentPhase === PHASE_LINK_PROMPT) {
+            userInput.link = inputBuffer;
+            inputBuffer = '';
+            transitionPhase(PHASE_EMAIL_PROMPT);
+          } else if (currentPhase === PHASE_EMAIL_PROMPT) {
+            userInput.email = inputBuffer;
+            inputBuffer = '';
+            blinkScreen();
+          }
+        } else if (event.key === 'Backspace') {
+          event.preventDefault();
+          inputBuffer = inputBuffer.slice(0, -1);
+          render();
+        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          event.preventDefault();
+          inputBuffer += event.key;
+          render();
+        }
+      }
+    }
+
+    // Typewriter effect for displaying text
+    function typewriterRender(text, showCursor = false, callback = null) {
+      isTyping = true;
+      let charIndex = 0;
+      staticContent.innerHTML = '';
+      inputLine.innerHTML = showCursor ? '<span class="cursor">_</span>' : '';
+
+      function typeNextChar() {
+        if (charIndex < text.length) {
+          const displayText = text.substring(0, charIndex + 1)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br>');
+          staticContent.innerHTML = displayText;
+          scrollToBottom();
+          charIndex++;
+          setTimeout(typeNextChar, TYPE_DELAY);
+        } else {
+          isTyping = false;
+          if (callback) callback();
+        }
+      }
+
+      typeNextChar();
+    }
+
+    // Typewriter effect for multiple lines
+    function typewriterLines(lines, callback = null, isFlavour = false) {
+      isTyping = true;
+      let lineIndex = 0;
+      let charIndex = 0;
+      let displayedLines = [];
+      inputLine.innerHTML = '';
+      const flavourClass = isFlavour ? ' flavour' : '';
+
+      function typeNextChar() {
+        if (lineIndex < lines.length) {
+          const currentLine = lines[lineIndex];
+
+          if (charIndex < currentLine.length) {
+            const partialLine = currentLine.substring(0, charIndex + 1);
+            const html = [...displayedLines, partialLine].map(line =>
+              `<div class="terminal-line${flavourClass}">${line}</div>`
+            ).join('');
+            staticContent.innerHTML = html;
+            scrollToBottom();
+            charIndex++;
+            setTimeout(typeNextChar, TYPE_DELAY);
+          } else {
+            displayedLines.push(currentLine);
+            lineIndex++;
+            charIndex = 0;
+            if (lineIndex < lines.length) {
+              setTimeout(typeNextChar, TYPE_DELAY);
+            } else {
+              isTyping = false;
+              if (callback) callback();
+            }
+          }
+        }
+      }
+
+      typeNextChar();
+    }
+
+    // Typewriter effect that appends to existing static content
+    function typewriterAppend(text, showCursor = false, callback = null) {
+      isTyping = true;
+      let charIndex = 0;
+      const baseHTML = staticContent.innerHTML;
+
+      function typeNextChar() {
+        if (charIndex < text.length) {
+          // Escape HTML entities in the appended text
+          const appendText = text.substring(0, charIndex + 1)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br>');
+          staticContent.innerHTML = baseHTML + appendText;
+          scrollToBottom();
+          charIndex++;
+          setTimeout(typeNextChar, TYPE_DELAY);
+        } else {
+          isTyping = false;
+          if (callback) callback();
+        }
+      }
+
+      typeNextChar();
+    }
+
+    // Typewriter effect that appends multiple lines to existing content
+    function typewriterLinesAppend(lines, callback = null, isFlavour = false) {
+      isTyping = true;
+      let lineIndex = 0;
+      let charIndex = 0;
+      const baseHTML = staticContent.innerHTML;
+      const flavourClass = isFlavour ? ' class="flavour"' : '';
+
+      function typeNextChar() {
+        if (lineIndex < lines.length) {
+          const currentLine = lines[lineIndex];
+
+          if (charIndex < currentLine.length) {
+            const partialLine = currentLine.substring(0, charIndex + 1);
+            const completedLines = lines.slice(0, lineIndex).map(l => `<div${flavourClass}>${l}</div>`).join('');
+            const currentLineHTML = `<div${flavourClass}>${partialLine}</div>`;
+            staticContent.innerHTML = baseHTML + '<br><br>' + completedLines + currentLineHTML;
+            scrollToBottom();
+            charIndex++;
+            setTimeout(typeNextChar, TYPE_DELAY);
+          } else {
+            lineIndex++;
+            charIndex = 0;
+            if (lineIndex < lines.length) {
+              setTimeout(typeNextChar, TYPE_DELAY);
+            } else {
+              isTyping = false;
+              if (callback) callback();
+            }
+          }
+        }
+      }
+
+      typeNextChar();
+    }
+
+    // Transition between phases
+    function transitionPhase(newPhase) {
+      currentPhase = newPhase;
+
+      if (newPhase === PHASE_TERMINAL_SIM) {
+        typewriterLines(terminalCommands, () => {
+          setTimeout(() => {
+            transitionPhase(PHASE_NAME_PROMPT);
+          }, 500);
+        }, true); // flavour text
+      } else if (newPhase === PHASE_NAME_PROMPT) {
+        typewriterRender('Name: ', false, () => {
+          inputBuffer = '';
+          inputLine.innerHTML = '<span class="cursor">_</span>';
+        });
+      } else if (newPhase === PHASE_DESCRIPTION) {
+        // Show name received loading feedback
+        inputLine.innerHTML = '';
+        staticContent.innerHTML = `Name: ${userInput.name}`;
+        typewriterLinesAppend(nameReceivedLines, () => {
+          // Then show description and transition to link prompt
+          const descText = `\n\nYour creativity is your ticket. Please share a creation of which you are proud.`;
+          typewriterAppend(descText, false, () => {
+            setTimeout(() => {
+              transitionPhase(PHASE_LINK_PROMPT);
+            }, 1000);
+          });
+        }, true); // flavour text
+      } else if (newPhase === PHASE_LINK_PROMPT) {
+        const newText = `\n\nLink: `;
+        typewriterAppend(newText, false, () => {
+          inputBuffer = '';
+          inputLine.innerHTML = '<span class="cursor">_</span>';
+        });
+      } else if (newPhase === PHASE_EMAIL_PROMPT) {
+        // Show link received loading feedback
+        inputLine.innerHTML = '';
+        staticContent.innerHTML += userInput.link;
+        typewriterLinesAppend(linkReceivedLines, () => {
+          const newText = `\n\nEmail: `;
+          typewriterAppend(newText, false, () => {
+            inputBuffer = '';
+            inputLine.innerHTML = '<span class="cursor">_</span>';
+          });
+        }, true); // flavour text
+      } else if (newPhase === PHASE_COMPLETE) {
+        // Show email received loading feedback
+        inputLine.innerHTML = '';
+        staticContent.innerHTML += userInput.email;
+        typewriterLinesAppend(emailReceivedLines, () => {
+          // Show loading bar
+          showLoadingBar(() => {
+            // Clear everything and show final message alone
+            setTimeout(() => {
+              staticContent.textContent = '';
+              inputLine.innerHTML = '';
+              typewriterRender('Transmission received. We will be in touch, creator.', false);
+            }, 300);
+          });
+        }, true); // flavour text
+      } else {
+        render();
+      }
+    }
+
+    // Submit data to Google Sheet
+    function submitToGoogleSheet() {
+      const url = 'https://script.google.com/macros/s/AKfycbxy2w6a7h2raxlPCRuJrwds12TK-KzUU4Dzg39YuCWIXavXg-aAD9Jd_eHr_-tStGMO2A/exec';
+
+      fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: userInput.name,
+          link: userInput.link,
+          email: userInput.email
+        })
+      }).catch(err => {
+        console.error('Submission error:', err);
+      });
+    }
+
+    // Screen blink effect
+    function blinkScreen() {
+      submitToGoogleSheet();
+
+      consoleWindow.style.transition = 'opacity 100ms';
+      consoleWindow.style.opacity = '0';
+
+      setTimeout(() => {
+        consoleWindow.style.opacity = '1';
+
+        setTimeout(() => {
+          consoleWindow.style.transition = '';
+          transitionPhase(PHASE_COMPLETE);
+        }, 100);
+      }, 100);
+    }
+
+    // Render just the input line
+    function render() {
+      if (isTyping) return;
+      inputLine.innerHTML = `${inputBuffer}<span class="cursor">_</span>`;
+    }
+
+    // Start when DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+
+</body>
+</html>
