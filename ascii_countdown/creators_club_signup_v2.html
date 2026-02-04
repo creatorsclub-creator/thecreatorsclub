@@ -10,29 +10,121 @@
       padding: 0;
       background: #000;
       min-height: 100vh;
-      font-family: Consolas, monospace;
+      font-family: Consolas, 'Noto Sans Mono CJK TC', 'Source Han Mono TC', 'Microsoft JhengHei', 'PingFang TC', monospace;
       overflow: hidden;
     }
 
-    .cli-hero {
+    /* ========================================
+       COUNTDOWN HERO (Background Layer)
+       ======================================== */
+    .countdown-hero {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
-      min-height: 100vh;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      transition: opacity 0.5s ease;
+    }
+
+    .countdown-hero.faded {
+      opacity: 0.25;
+    }
+
+    #asciiCountdown {
+      margin: 0;
+      padding: 0;
+      white-space: pre;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.1;
+      color: #ff2b2b;
+      filter:
+        drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))
+        drop-shadow(0 0 20px rgba(255, 0, 0, 0.6))
+        drop-shadow(0 0 40px rgba(255, 0, 0, 0.4));
+      text-shadow:
+        0 0 5px rgba(255, 43, 43, 0.8),
+        0 0 10px rgba(255, 43, 43, 0.6);
+      font-variant-ligatures: none;
+      -webkit-font-smoothing: none;
+      text-rendering: geometricPrecision;
+      transform-origin: center center;
+      animation: crt-flicker 2s infinite;
+      text-align: center;
+    }
+
+    .crt-blink {
+      animation: crt-flicker 2s infinite;
+    }
+
+    .enter-prompt {
+      margin-top: 40px;
+      font-family: Consolas, 'Noto Sans Mono CJK TC', 'Source Han Mono TC', 'Microsoft JhengHei', 'PingFang TC', monospace;
+      font-size: 18px;
+      color: #ff2b2b;
+      text-shadow:
+        0 0 5px rgba(255, 43, 43, 0.8),
+        0 0 10px rgba(255, 43, 43, 0.6);
+      animation: crt-flicker 2s infinite;
+    }
+
+    .enter-prompt.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    /* ========================================
+       CLI WINDOW CONTAINER (Foreground Layer)
+       ======================================== */
+    .cli-window-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 10;
+      opacity: 0;
+      visibility: hidden;
       padding: 40px;
       box-sizing: border-box;
     }
 
-    /* =============================================
-       DESIGN 4: CSS Micro-Dashed Double Line
+    .cli-window-container.spawning {
+      visibility: visible;
+      animation: scanline-spawn 0.8s ease-out forwards;
+    }
 
-       EDITABLE VALUES:
-       - Line thickness: change "2px" in background-size (currently 2px)
-       - Visible line length: change first "10px" values in gradients
-       - Gap size: change "10.2px" values (visible + gap = 10 + 0.2 = 10.2)
-       - Gap between double lines: change "inset: 4px" (currently 4px spacing)
-       ============================================= */
+    .cli-window-container.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Scanline spawn effect */
+    @keyframes scanline-spawn {
+      0% {
+        clip-path: inset(0 0 100% 0);
+        opacity: 0;
+      }
+      5% {
+        opacity: 1;
+      }
+      100% {
+        clip-path: inset(0 0 0 0);
+        opacity: 1;
+      }
+    }
+
+    /* ========================================
+       CSS DASHED WINDOW
+       ======================================== */
     .css-dashed-window {
       max-width: 820px;
       width: 100%;
@@ -46,7 +138,6 @@
       animation: crt-flicker 2s infinite, phosphor-pulse 4s ease-in-out infinite;
     }
 
-    /* Outer border */
     .css-dashed-window::before {
       content: '';
       position: absolute;
@@ -55,11 +146,10 @@
       pointer-events: none;
     }
 
-    /* Inner border */
     .css-dashed-window::after {
       content: '';
       position: absolute;
-      inset: 3px; /* Gap between double lines */
+      inset: 3px;
       border: 1px solid #ff2b2b;
       pointer-events: none;
     }
@@ -71,7 +161,6 @@
       margin: 3px;
     }
 
-    /* Scanlines overlay */
     .css-dashed-window .inner-wrapper::before {
       content: '';
       position: absolute;
@@ -90,7 +179,6 @@
       z-index: 10;
     }
 
-    /* Noise/grain overlay + vignette */
     .css-dashed-window .inner-wrapper::after {
       content: '';
       position: absolute;
@@ -99,9 +187,7 @@
       right: 0;
       bottom: 0;
       background:
-        /* Vignette */
         radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.4) 100%),
-        /* Noise */
         url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
       background-blend-mode: normal;
       opacity: 0.15;
@@ -118,7 +204,6 @@
       position: relative;
     }
 
-    /* Titlebar bottom borders */
     .css-dashed-window .titlebar::before {
       content: '';
       position: absolute;
@@ -140,14 +225,12 @@
     }
 
     .css-dashed-window .titlebar-title {
-      font-family: Consolas, monospace;
+      font-family: Consolas, 'Noto Sans Mono CJK TC', 'Source Han Mono TC', 'Microsoft JhengHei', 'PingFang TC', monospace;
       font-size: 14px;
       color: #ffffff;
       text-shadow:
-        /* Chromatic aberration */
         -0.5px 0 0 rgba(255, 100, 100, 0.4),
         0.5px 0 0 rgba(100, 255, 255, 0.2),
-        /* White glow */
         0 0 5px rgba(255, 255, 255, 0.8),
         0 0 10px rgba(255, 255, 255, 0.6),
         0 0 20px rgba(255, 255, 255, 0.4),
@@ -165,11 +248,7 @@
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      border: 1px solid;
-    }
-
-    .css-dashed-window .circle {
-      border-color: #ff2b2b;
+      border: 1px solid #ff2b2b;
       box-shadow:
         0 0 4px rgba(255, 43, 43, 0.5),
         0 0 8px rgba(255, 43, 43, 0.3);
@@ -185,61 +264,6 @@
       box-shadow:
         0 0 8px rgba(255, 43, 43, 0.8),
         0 0 16px rgba(255, 43, 43, 0.5);
-    }
-
-    /* Desktop icon */
-    .desktop-icon {
-      position: fixed;
-      top: 30px;
-      left: 30px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s, visibility 0.3s;
-      z-index: 100;
-    }
-
-    .desktop-icon.visible {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .desktop-icon:hover .icon-box {
-      border-color: #ff5555;
-      box-shadow:
-        0 0 8px rgba(255, 43, 43, 0.6),
-        0 0 16px rgba(255, 43, 43, 0.3);
-    }
-
-    .desktop-icon .icon-box {
-      width: 48px;
-      height: 48px;
-      border: 1px solid #ff2b2b;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: Consolas, monospace;
-      font-size: 24px;
-      color: #ff2b2b;
-      text-shadow:
-        0 0 4px rgba(255, 43, 43, 0.8),
-        0 0 8px rgba(255, 43, 43, 0.4);
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-
-    .desktop-icon .icon-label {
-      margin-top: 6px;
-      font-family: Consolas, monospace;
-      font-size: 11px;
-      color: #ff2b2b;
-      text-shadow:
-        0 0 4px rgba(255, 43, 43, 0.6);
-      text-align: center;
-      max-width: 80px;
-      word-break: break-all;
     }
 
     .css-dashed-window .body-scroll {
@@ -266,33 +290,23 @@
 
     .css-dashed-window .body-content {
       padding: 15px 20px;
-      font-family: Consolas, monospace;
+      font-family: Consolas, 'Noto Sans Mono CJK TC', 'Source Han Mono TC', 'Microsoft JhengHei', 'PingFang TC', monospace;
       font-size: 18px;
       line-height: 1.4;
       color: #ff2b2b;
       text-shadow:
-        /* Chromatic aberration - subtle RGB split */
         -0.5px 0 0 rgba(255, 0, 0, 0.5),
         0.5px 0 0 rgba(0, 255, 255, 0.15),
-        /* Main glow - increased intensity */
         0 0 3px rgba(255, 43, 43, 1),
         0 0 6px rgba(255, 43, 43, 0.85),
         0 0 12px rgba(255, 43, 43, 0.6),
         0 0 25px rgba(255, 43, 43, 0.4),
         0 0 50px rgba(255, 43, 43, 0.2);
-      /* Disable font smoothing for sharper CRT look */
       -webkit-font-smoothing: none;
       -moz-osx-font-smoothing: grayscale;
       font-variant-ligatures: none;
     }
 
-    .css-dashed-window .body-content .line {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-
-    /* CLI Terminal */
     #cliTerminal {
       margin: 0;
       padding: 0;
@@ -307,7 +321,6 @@
       margin: 0.3em 0;
     }
 
-    /* Cursor blink animation */
     @keyframes cursor-blink {
       0%, 49% { opacity: 1; }
       50%, 100% { opacity: 0; }
@@ -318,12 +331,6 @@
       display: inline;
     }
 
-    /* Loading bar line */
-    .loading-line {
-      margin: 0.3em 0;
-    }
-
-    /* Flavour text (muted green with glow) */
     .flavour {
       color: #4a9a4a;
       text-shadow:
@@ -335,7 +342,32 @@
         0 0 24px rgba(74, 154, 74, 0.15);
     }
 
-    /* CRT flicker animation - subtle */
+    /* Language selection menu */
+    .lang-menu {
+      padding: 20px 0;
+    }
+
+    .lang-option {
+      color: #666;
+      padding: 5px 0;
+      text-shadow: none;
+    }
+
+    .lang-selected {
+      color: #ff2b2b;
+      padding: 5px 0;
+      text-shadow:
+        0 0 3px rgba(255, 43, 43, 1),
+        0 0 6px rgba(255, 43, 43, 0.85),
+        0 0 12px rgba(255, 43, 43, 0.6);
+    }
+
+    .lang-hint {
+      margin-top: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+
     @keyframes crt-flicker {
       0% { opacity: 1; }
       2% { opacity: 0.98; }
@@ -365,13 +397,6 @@
       100% { opacity: 1; }
     }
 
-    /* Scanline effect */
-    @keyframes scanline {
-      0% { transform: translateY(-100%); }
-      100% { transform: translateY(100vh); }
-    }
-
-    /* Phosphor glow pulse - subtle */
     @keyframes phosphor-pulse {
       0%, 100% {
         filter:
@@ -387,7 +412,6 @@
       }
     }
 
-    /* Sweeping scanline */
     @keyframes sweep {
       0% { top: -10%; }
       100% { top: 110%; }
@@ -415,14 +439,16 @@
 </head>
 <body>
 
-  <!-- Desktop Icon -->
-  <div class="desktop-icon" id="desktopIcon">
-    <div class="icon-box">▣</div>
-    <div class="icon-label">creators_club.exe</div>
+  <!-- Countdown Hero (Background Layer) -->
+  <div class="countdown-hero" id="countdownHero">
+    <pre id="asciiCountdown">Loading...</pre>
+    <div class="enter-prompt" id="enterPrompt">
+      Press ↵ to continue / 按 ↵ 繼續<span class="cursor">_</span>
+    </div>
   </div>
 
-  <!-- CLI Interface Window -->
-  <div class="cli-hero" id="cliHero">
+  <!-- CLI Window Container (Foreground Layer) -->
+  <div class="cli-window-container" id="cliContainer">
     <div class="css-dashed-window">
       <div class="sweep-scanline"></div>
       <div class="inner-wrapper">
@@ -446,7 +472,9 @@
   <script>
   (function() {
     // Phase constants
-    const PHASE_PRESS_ENTER = 0;
+    const PHASE_INITIAL = -1;  // Waiting for first ENTER (countdown visible)
+    const PHASE_SPAWNING = 0;  // Window spawning animation
+    const PHASE_LANG_SELECT = 0.5;  // Language selection
     const PHASE_TERMINAL_SIM = 1;
     const PHASE_NAME_PROMPT = 2;
     const PHASE_DESCRIPTION = 3;
@@ -455,35 +483,70 @@
     const PHASE_INSTAGRAM_PROMPT = 6;
     const PHASE_COMPLETE = 7;
 
-    // Typing speed
     const TYPE_DELAY = 5;
 
-    // State
-    let currentPhase = PHASE_PRESS_ENTER;
+    let currentPhase = PHASE_INITIAL;
     let userInput = { name: '', link: '', email: '', instagram: '' };
     let inputBuffer = '';
     let staticContent = null;
     let inputLine = null;
-    let consoleWindow = null;
     let bodyScroll = null;
     let isTyping = false;
 
-    // Auto-scroll to bottom
+    // Language state
+    let selectedLang = 'en';  // 'en' or 'zh'
+    let langMenuIndex = 0;    // 0 = English, 1 = 中文
+
+    // Translation strings
+    const LANG = {
+      en: {
+        name: 'Name: ',
+        creativity: 'Your creativity is your ticket. Share a creation.',
+        link: 'Link: ',
+        email: 'Email: ',
+        instagram: 'Instagram [/skip to skip]: ',
+        errorLink: 'invalid_link_format;;must contain valid domain',
+        errorEmail: 'invalid_email_format;;must contain @ and domain',
+        errorInsta: 'invalid_handle_format;;must be valid instagram username',
+        tryAgain: 'Try again: ',
+        complete: 'Transmission received. We will be in touch, creator.'
+      },
+      zh: {
+        name: '姓名：',
+        creativity: '創意是你的入場券。分享一項創作。',
+        link: '連結：',
+        email: '電郵：',
+        instagram: 'Instagram [輸入 /skip 跳過]：',
+        errorLink: '連結格式無效;;必須包含有效網域',
+        errorEmail: '電郵格式無效;;必須包含 @ 及網域',
+        errorInsta: '帳號格式無效;;必須為有效的 Instagram 用戶名',
+        tryAgain: '再試一次：',
+        complete: '傳輸完成。我們會與你聯繫，創作者。'
+      }
+    };
+
+    function t(key) {
+      return LANG[selectedLang][key];
+    }
+
+    // DOM elements
+    let countdownHero = null;
+    let enterPrompt = null;
+    let cliContainer = null;
+
     function scrollToBottom() {
       if (bodyScroll) {
         bodyScroll.scrollTop = bodyScroll.scrollHeight;
       }
     }
 
-    // Create and animate retro loading bar (ASCII style)
     function showLoadingBar(callback) {
       const totalChunks = 20;
-      const totalTime = 2100; // 2.1 seconds
+      const totalTime = 2100;
       const chunkDelay = totalTime / totalChunks;
-      const filledChar = '█';
-      const emptyChar = '░';
+      const filledChar = '\u2588';
+      const emptyChar = '\u2591';
 
-      // Append loading line to static content
       const baseHTML = staticContent.innerHTML;
       let currentChunk = 0;
 
@@ -492,7 +555,7 @@
         const empty = emptyChar.repeat(totalChunks - currentChunk);
         const percent = Math.round((currentChunk / totalChunks) * 100);
         const percentStr = percent.toString().padStart(3, ' ').replace(/ /g, '&nbsp;');
-        staticContent.innerHTML = baseHTML + `<br><br>uploading//: ${filled}${empty} ${percentStr}%`;
+        staticContent.innerHTML = baseHTML + `<br>uploading//: ${filled}${empty} ${percentStr}%`;
         scrollToBottom();
       }
 
@@ -510,7 +573,6 @@
       setTimeout(fillNextChunk, chunkDelay);
     }
 
-    // Creative console jargon content (flavour text)
     const terminalCommands = [
       'boot_seq//init...',
       'loading cr34t0r_m4tr1x.sys ............ [OK]',
@@ -527,7 +589,6 @@
       'aw4iting input>>_'
     ];
 
-    // Loading feedback after name entry
     const nameReceivedLines = [
       'nam3_signal==received__uploading%%',
       'parsing identity_matrix..................[OK]',
@@ -535,7 +596,6 @@
       'nominal_principle=TRUE'
     ];
 
-    // Loading feedback after link entry
     const linkReceivedLines = [
       'link::captured>>analyzing_payload...',
       'scanning w0rk_signature for authenticity............',
@@ -543,7 +603,6 @@
       '[OK] portfolio_node successfully mapped'
     ];
 
-    // Loading feedback after email entry
     const emailReceivedLines = [
       'c0ntact_vector==established//',
       'encrypting comm_channel..............[SECURE]',
@@ -551,7 +610,6 @@
       'transmission_status=NOMINAL'
     ];
 
-    // Loading feedback after instagram entry
     const instagramReceivedLines = [
       's0cial_link::binding...',
       'verifying handle_authenticity............[OK]',
@@ -559,9 +617,7 @@
       'network_node::connected>>>'
     ];
 
-    // Validation functions
     function isValidEmail(email) {
-      // Check for @ and at least one . after @
       const atIndex = email.indexOf('@');
       if (atIndex < 1) return false;
       const afterAt = email.substring(atIndex + 1);
@@ -569,15 +625,11 @@
     }
 
     function isValidLink(link) {
-      // Check for at least one . in the link
       return link.includes('.') && !link.startsWith('.') && !link.endsWith('.');
     }
 
     function isValidInstagram(handle) {
-      // Remove @ prefix if present
       const cleaned = handle.startsWith('@') ? handle.substring(1) : handle;
-      // Instagram usernames: 1-30 chars, alphanumeric, underscores, periods
-      // Cannot start/end with period, no consecutive periods
       if (cleaned.length < 1 || cleaned.length > 30) return false;
       if (!/^[a-zA-Z0-9._]+$/.test(cleaned)) return false;
       if (cleaned.startsWith('.') || cleaned.endsWith('.')) return false;
@@ -585,94 +637,92 @@
       return true;
     }
 
-    // Initialize
     function init() {
       staticContent = document.getElementById('staticContent');
       inputLine = document.getElementById('inputLine');
-      consoleWindow = document.querySelector('.css-dashed-window');
       bodyScroll = document.querySelector('.body-scroll');
+      countdownHero = document.getElementById('countdownHero');
+      enterPrompt = document.getElementById('enterPrompt');
+      cliContainer = document.getElementById('cliContainer');
 
-      if (!staticContent || !inputLine || !consoleWindow || !bodyScroll) {
+      if (!staticContent || !inputLine || !bodyScroll || !countdownHero || !enterPrompt || !cliContainer) {
         setTimeout(init, 100);
         return;
       }
 
-      // Start with press enter prompt
-      typewriterRender('Press ENTER to continue', true);
-
-      // Add keyboard listener
       document.addEventListener('keydown', handleKeyPress);
-
-      // Add paste listener
       document.addEventListener('paste', handlePaste);
 
-      // Add close button listener
       const closeBtn = document.getElementById('closeBtn');
       if (closeBtn) {
         closeBtn.addEventListener('click', closeWindow);
       }
-
-      // Add desktop icon listener
-      const desktopIcon = document.getElementById('desktopIcon');
-      if (desktopIcon) {
-        desktopIcon.addEventListener('click', openWindow);
-      }
     }
 
-    // Close window and show desktop icon
-    function closeWindow() {
-      const cliHero = document.getElementById('cliHero');
-      const desktopIcon = document.getElementById('desktopIcon');
+    function renderLangMenu() {
+      const options = ['English', '中文'];
+      let html = '<div class="lang-menu">';
+      html += 'Select Language / 選擇語言<br><br>';
 
-      // Fade out window
-      consoleWindow.style.transition = 'opacity 0.2s';
-      consoleWindow.style.opacity = '0';
+      options.forEach((opt, i) => {
+        const selected = i === langMenuIndex;
+        const cls = selected ? 'lang-selected' : 'lang-option';
+        const arrow = selected ? '> ' : '  ';
+        html += `<div class="${cls}">${arrow}${opt}</div>`;
+      });
 
-      setTimeout(() => {
-        cliHero.style.display = 'none';
-        consoleWindow.style.transition = '';
-        consoleWindow.style.opacity = '1';
+      html += '<div class="lang-hint">[↑↓] Select  [ENTER] Confirm</div>';
+      html += '</div>';
 
-        // Show desktop icon
-        desktopIcon.classList.add('visible');
-      }, 200);
-    }
-
-    // Open window from desktop icon
-    function openWindow() {
-      const cliHero = document.getElementById('cliHero');
-      const desktopIcon = document.getElementById('desktopIcon');
-
-      // Hide desktop icon
-      desktopIcon.classList.remove('visible');
-
-      // Reset state
-      currentPhase = PHASE_PRESS_ENTER;
-      userInput = { name: '', link: '', email: '', instagram: '' };
-      inputBuffer = '';
-      isTyping = false;
-
-      // Reset terminal content
-      staticContent.textContent = '';
+      staticContent.innerHTML = html;
       inputLine.innerHTML = '';
-
-      // Show window
-      consoleWindow.style.opacity = '0';
-      cliHero.style.display = 'flex';
-
-      setTimeout(() => {
-        consoleWindow.style.transition = 'opacity 0.2s';
-        consoleWindow.style.opacity = '1';
-
-        setTimeout(() => {
-          consoleWindow.style.transition = '';
-          // Start CLI sequence
-          typewriterRender('Press ENTER to continue', true);
-        }, 200);
-      }, 50);
     }
 
-    // Handle paste events
+    function spawnWindow() {
+      // Hide enter prompt
+      enterPrompt.classList.add('hidden');
+
+      // Fade countdown
+      countdownHero.classList.add('faded');
+
+      // Spawn CLI window with animation
+      cliContainer.classList.add('spawning');
+
+      // After animation completes, show language selection
+      setTimeout(() => {
+        cliContainer.classList.remove('spawning');
+        cliContainer.classList.add('visible');
+        currentPhase = PHASE_LANG_SELECT;
+        renderLangMenu();
+      }, 800);
+    }
+
+    function closeWindow() {
+      // Fade out window
+      cliContainer.style.transition = 'opacity 0.3s';
+      cliContainer.style.opacity = '0';
+
+      setTimeout(() => {
+        cliContainer.classList.remove('visible');
+        cliContainer.style.transition = '';
+        cliContainer.style.opacity = '';
+
+        // Show countdown again
+        countdownHero.classList.remove('faded');
+        enterPrompt.classList.remove('hidden');
+
+        // Reset state
+        currentPhase = PHASE_INITIAL;
+        userInput = { name: '', link: '', email: '', instagram: '' };
+        inputBuffer = '';
+        isTyping = false;
+        staticContent.textContent = '';
+        inputLine.innerHTML = '';
+        selectedLang = 'en';
+        langMenuIndex = 0;
+      }, 300);
+    }
+
     function handlePaste(event) {
       if (currentPhase === PHASE_NAME_PROMPT ||
           currentPhase === PHASE_LINK_PROMPT ||
@@ -686,14 +736,12 @@
       }
     }
 
-    // Show validation error
     function showValidationError(message, callback) {
       const baseHTML = staticContent.innerHTML;
       staticContent.innerHTML = baseHTML + `<br>[ERROR] ${message}`;
       scrollToBottom();
       setTimeout(() => {
-        // Add "try again:" prompt on new line
-        staticContent.innerHTML += `<br>Try again: `;
+        staticContent.innerHTML += `<br>${t('tryAgain')}`;
         scrollToBottom();
         inputBuffer = '';
         inputLine.innerHTML = '<span class="cursor">_</span>';
@@ -701,22 +749,47 @@
       }, 1500);
     }
 
-    // Handle keyboard input
     function handleKeyPress(event) {
       if (isTyping) {
         event.preventDefault();
         return;
       }
 
-      if (currentPhase === PHASE_PRESS_ENTER) {
+      // Initial phase - waiting for first ENTER
+      if (currentPhase === PHASE_INITIAL) {
         if (event.key === 'Enter') {
           event.preventDefault();
+          spawnWindow();
+        }
+        return;
+      }
+
+      // Spawning phase - ignore input
+      if (currentPhase === PHASE_SPAWNING) {
+        event.preventDefault();
+        return;
+      }
+
+      // Language selection phase
+      if (currentPhase === PHASE_LANG_SELECT) {
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          // Toggle between 0 and 1 (cycles)
+          langMenuIndex = langMenuIndex === 0 ? 1 : 0;
+          renderLangMenu();
+        } else if (event.key === 'Enter') {
+          event.preventDefault();
+          selectedLang = langMenuIndex === 0 ? 'en' : 'zh';
           transitionPhase(PHASE_TERMINAL_SIM);
         }
-      } else if (currentPhase === PHASE_NAME_PROMPT ||
-                 currentPhase === PHASE_LINK_PROMPT ||
-                 currentPhase === PHASE_EMAIL_PROMPT ||
-                 currentPhase === PHASE_INSTAGRAM_PROMPT) {
+        return;
+      }
+
+      // Form input phases
+      if (currentPhase === PHASE_NAME_PROMPT ||
+          currentPhase === PHASE_LINK_PROMPT ||
+          currentPhase === PHASE_EMAIL_PROMPT ||
+          currentPhase === PHASE_INSTAGRAM_PROMPT) {
 
         if (event.key === 'Enter') {
           event.preventDefault();
@@ -725,36 +798,31 @@
             inputBuffer = '';
             transitionPhase(PHASE_DESCRIPTION);
           } else if (currentPhase === PHASE_LINK_PROMPT) {
-            // Validate link
             if (!isValidLink(inputBuffer)) {
-              showValidationError('invalid_link_format;;must contain valid domain');
+              showValidationError(t('errorLink'));
               return;
             }
             userInput.link = inputBuffer;
             inputBuffer = '';
             transitionPhase(PHASE_EMAIL_PROMPT);
           } else if (currentPhase === PHASE_EMAIL_PROMPT) {
-            // Validate email
             if (!isValidEmail(inputBuffer)) {
-              showValidationError('invalid_email_format;;must contain @ and domain');
+              showValidationError(t('errorEmail'));
               return;
             }
             userInput.email = inputBuffer;
             inputBuffer = '';
             transitionPhase(PHASE_INSTAGRAM_PROMPT);
           } else if (currentPhase === PHASE_INSTAGRAM_PROMPT) {
-            // Check for /skip
             if (inputBuffer.toLowerCase() === '/skip') {
               userInput.instagram = '-';
               inputBuffer = '';
               blinkScreen();
             } else {
-              // Validate Instagram handle format
               if (!isValidInstagram(inputBuffer)) {
-                showValidationError('invalid_handle_format;;must be valid instagram username');
+                showValidationError(t('errorInsta'));
                 return;
               }
-              // Clean the handle (remove @ if present)
               userInput.instagram = inputBuffer.startsWith('@') ? inputBuffer.substring(1) : inputBuffer;
               inputBuffer = '';
               blinkScreen();
@@ -772,7 +840,6 @@
       }
     }
 
-    // Typewriter effect for displaying text
     function typewriterRender(text, showCursor = false, callback = null) {
       isTyping = true;
       let charIndex = 0;
@@ -799,7 +866,6 @@
       typeNextChar();
     }
 
-    // Typewriter effect for multiple lines
     function typewriterLines(lines, callback = null, isFlavour = false) {
       isTyping = true;
       let lineIndex = 0;
@@ -838,7 +904,6 @@
       typeNextChar();
     }
 
-    // Typewriter effect that appends to existing static content
     function typewriterAppend(text, showCursor = false, callback = null) {
       isTyping = true;
       let charIndex = 0;
@@ -846,7 +911,6 @@
 
       function typeNextChar() {
         if (charIndex < text.length) {
-          // Escape HTML entities in the appended text
           const appendText = text.substring(0, charIndex + 1)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -865,7 +929,6 @@
       typeNextChar();
     }
 
-    // Typewriter effect that appends multiple lines to existing content
     function typewriterLinesAppend(lines, callback = null, isFlavour = false) {
       isTyping = true;
       let lineIndex = 0;
@@ -881,7 +944,7 @@
             const partialLine = currentLine.substring(0, charIndex + 1);
             const completedLines = lines.slice(0, lineIndex).map(l => `<div${flavourClass}>${l}</div>`).join('');
             const currentLineHTML = `<div${flavourClass}>${partialLine}</div>`;
-            staticContent.innerHTML = baseHTML + '<br><br>' + completedLines + currentLineHTML;
+            staticContent.innerHTML = baseHTML + '<br>' + completedLines + currentLineHTML;
             scrollToBottom();
             charIndex++;
             setTimeout(typeNextChar, TYPE_DELAY);
@@ -901,7 +964,6 @@
       typeNextChar();
     }
 
-    // Transition between phases
     function transitionPhase(newPhase) {
       currentPhase = newPhase;
 
@@ -910,90 +972,79 @@
           setTimeout(() => {
             transitionPhase(PHASE_NAME_PROMPT);
           }, 500);
-        }, true); // flavour text
+        }, true);
       } else if (newPhase === PHASE_NAME_PROMPT) {
-        typewriterRender('Name: ', false, () => {
+        typewriterRender(t('name'), false, () => {
           inputBuffer = '';
           inputLine.innerHTML = '<span class="cursor">_</span>';
         });
       } else if (newPhase === PHASE_DESCRIPTION) {
-        // Show name received loading feedback
         inputLine.innerHTML = '';
-        staticContent.innerHTML = `Name: ${userInput.name}`;
+        staticContent.innerHTML = `${t('name')}${userInput.name}`;
         typewriterLinesAppend(nameReceivedLines, () => {
-          // Then show description and transition to link prompt
-          const descText = `\n\nYour creativity is your ticket. Please share a creation of which you are proud.`;
+          const descText = `\n${t('creativity')}`;
           typewriterAppend(descText, false, () => {
             setTimeout(() => {
               transitionPhase(PHASE_LINK_PROMPT);
             }, 1000);
           });
-        }, true); // flavour text
+        }, true);
       } else if (newPhase === PHASE_LINK_PROMPT) {
-        const newText = `\n\nLink: `;
+        const newText = `\n${t('link')}`;
         typewriterAppend(newText, false, () => {
           inputBuffer = '';
           inputLine.innerHTML = '<span class="cursor">_</span>';
         });
       } else if (newPhase === PHASE_EMAIL_PROMPT) {
-        // Show link received loading feedback
         inputLine.innerHTML = '';
         staticContent.innerHTML += userInput.link;
         typewriterLinesAppend(linkReceivedLines, () => {
-          const newText = `\n\nEmail: `;
+          const newText = `\n${t('email')}`;
           typewriterAppend(newText, false, () => {
             inputBuffer = '';
             inputLine.innerHTML = '<span class="cursor">_</span>';
           });
-        }, true); // flavour text
+        }, true);
       } else if (newPhase === PHASE_INSTAGRAM_PROMPT) {
-        // Show email received loading feedback
         inputLine.innerHTML = '';
         staticContent.innerHTML += userInput.email;
         typewriterLinesAppend(emailReceivedLines, () => {
-          const newText = `\n\nInstagram [/skip to skip]: `;
+          const newText = `\n${t('instagram')}`;
           typewriterAppend(newText, false, () => {
             inputBuffer = '';
             inputLine.innerHTML = '<span class="cursor">_</span>';
           });
-        }, true); // flavour text
+        }, true);
       } else if (newPhase === PHASE_COMPLETE) {
-        // Show instagram received loading feedback (or skip message)
         inputLine.innerHTML = '';
         if (userInput.instagram && userInput.instagram !== '-') {
           staticContent.innerHTML += userInput.instagram;
           typewriterLinesAppend(instagramReceivedLines, () => {
-            // Show loading bar
             showLoadingBar(() => {
-              // Clear everything and show final message alone
               setTimeout(() => {
                 staticContent.textContent = '';
                 inputLine.innerHTML = '';
-                typewriterRender('Transmission received. We will be in touch, creator.', false);
+                typewriterRender(t('complete'), false);
               }, 300);
             });
-          }, true); // flavour text
+          }, true);
         } else {
-          // Skipped instagram
           staticContent.innerHTML += '<span class="flavour">/skip</span>';
           typewriterLinesAppend(['[SKIPPED] instagram_field::null', 'proceeding_without_social_link...'], () => {
-            // Show loading bar
             showLoadingBar(() => {
-              // Clear everything and show final message alone
               setTimeout(() => {
                 staticContent.textContent = '';
                 inputLine.innerHTML = '';
-                typewriterRender('Transmission received. We will be in touch, creator.', false);
+                typewriterRender(t('complete'), false);
               }, 300);
             });
-          }, true); // flavour text
+          }, true);
         }
       } else {
         render();
       }
     }
 
-    // Submit data to Google Sheet
     function submitToGoogleSheet() {
       const url = 'https://script.google.com/macros/s/AKfycbxy2w6a7h2raxlPCRuJrwds12TK-KzUU4Dzg39YuCWIXavXg-aAD9Jd_eHr_-tStGMO2A/exec';
 
@@ -1014,34 +1065,230 @@
       });
     }
 
-    // Screen blink effect
     function blinkScreen() {
       submitToGoogleSheet();
 
-      consoleWindow.style.transition = 'opacity 100ms';
-      consoleWindow.style.opacity = '0';
+      const window = document.querySelector('.css-dashed-window');
+      window.style.transition = 'opacity 100ms';
+      window.style.opacity = '0';
 
       setTimeout(() => {
-        consoleWindow.style.opacity = '1';
+        window.style.opacity = '1';
 
         setTimeout(() => {
-          consoleWindow.style.transition = '';
+          window.style.transition = '';
           transitionPhase(PHASE_COMPLETE);
         }, 100);
       }, 100);
     }
 
-    // Render just the input line
     function render() {
       if (isTyping) return;
       inputLine.innerHTML = `${inputBuffer}<span class="cursor">_</span>`;
     }
 
-    // Start when DOM ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
     } else {
       init();
+    }
+  })();
+  </script>
+
+  <!-- Figlet library for ASCII art -->
+  <script src="https://cdn.jsdelivr.net/npm/figlet@1.7.0/lib/figlet.js"></script>
+
+  <!-- Countdown Script -->
+  <script>
+  (function() {
+    const TARGET = new Date("2026-03-28T19:00:00+08:00").getTime();
+    const FONT_NAME = "basic";
+
+    let countdownPre = null;
+    let fontReady = false;
+    let glyphCache = {};
+    let glyphHeight = 0;
+    let glyphWidth = 0;
+
+    function initCountdown() {
+      countdownPre = document.getElementById("asciiCountdown");
+      if (!countdownPre) {
+        setTimeout(initCountdown, 100);
+        return;
+      }
+      countdownPre.textContent = "Loading font...";
+      loadFont();
+    }
+
+    function loadFont() {
+      const fontUrl = `https://unpkg.com/figlet@1.7.0/fonts/${encodeURIComponent(FONT_NAME)}.flf`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+
+      fetch(fontUrl, { signal: controller.signal, mode: "cors" })
+        .then(res => {
+          clearTimeout(timeout);
+          if (!res.ok) throw new Error(`Font fetch failed: ${res.status}`);
+          return res.text();
+        })
+        .then(fontData => {
+          figlet.parseFont(FONT_NAME, fontData);
+          fontReady = true;
+          buildFixedWidthGlyphs();
+          tickCountdown();
+        })
+        .catch(err => {
+          console.error("Font load error:", err);
+          countdownPre.textContent = "Font load error";
+        });
+    }
+
+    function buildFixedWidthGlyphs() {
+      try {
+        const chars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':'];
+        let maxWidth = 0;
+        const renderedChars = {};
+
+        for (const ch of chars) {
+          const ascii = figlet.textSync(ch, { font: FONT_NAME });
+          const lines = ascii.split('\n');
+          renderedChars[ch] = lines;
+          for (const line of lines) {
+            maxWidth = Math.max(maxWidth, line.length);
+          }
+          glyphHeight = Math.max(glyphHeight, lines.length);
+        }
+
+        glyphWidth = maxWidth;
+
+        for (const ch of chars) {
+          const lines = renderedChars[ch];
+          const paddedLines = [];
+          while (lines.length < glyphHeight) lines.push('');
+
+          for (const line of lines) {
+            let padded;
+            if (ch === ':') {
+              const trimmedLength = line.trimEnd().length;
+              const totalPadding = maxWidth - trimmedLength;
+              const leftPadding = Math.floor(totalPadding / 2);
+              const rightPadding = totalPadding - leftPadding;
+              padded = ' '.repeat(leftPadding) + line.trimEnd() + ' '.repeat(rightPadding);
+            } else {
+              padded = line.padEnd(maxWidth, ' ');
+            }
+            padded = padded.replace(/ /g, '\u00A0');
+            paddedLines.push(padded);
+          }
+          glyphCache[ch] = paddedLines;
+        }
+        fitCountdown();
+      } catch (e) {
+        console.error("Error building glyphs:", e);
+      }
+    }
+
+    function renderFixedWidth(text) {
+      const lines = Array.from({ length: glyphHeight }, () => '');
+      for (const ch of text) {
+        const glyph = glyphCache[ch] || glyphCache['0'];
+        for (let i = 0; i < glyphHeight; i++) {
+          lines[i] += glyph[i];
+        }
+      }
+      return lines.join('\n');
+    }
+
+    function generateLabels() {
+      const labels = ['_WEEK[S]', '_DAY[S]', '_HOUR[S]', '_MINUTE[S]', '_SECOND[S]', '_MILISECONDS'];
+      const digitWidth = glyphWidth * 2;
+      const colonWidth = glyphWidth;
+      let labelLine = '';
+
+      for (let i = 0; i < labels.length; i++) {
+        const label = labels[i];
+        const segmentWidth = digitWidth;
+        const padding = Math.floor((segmentWidth - label.length) / 2);
+        const labelPadded = ' '.repeat(padding) + label + ' '.repeat(segmentWidth - padding - label.length);
+        labelLine += labelPadded;
+        if (i < labels.length - 1) labelLine += ' '.repeat(colonWidth);
+      }
+      return labelLine.replace(/ /g, '\u00A0');
+    }
+
+    function pad(num, width) {
+      const s = String(num);
+      return s.length >= width ? s : ('0'.repeat(width - s.length) + s);
+    }
+
+    function breakdown(ms) {
+      if (ms < 0) ms = 0;
+      const totalSeconds = Math.floor(ms / 1000);
+      const milliseconds = ms % 1000;
+      const seconds = totalSeconds % 60;
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const minutes = totalMinutes % 60;
+      const totalHours = Math.floor(totalMinutes / 60);
+      const hours = totalHours % 24;
+      const totalDays = Math.floor(totalHours / 24);
+      const weeks = Math.floor(totalDays / 7);
+      const days = totalDays % 7;
+      return { weeks, days, hours, minutes, seconds, milliseconds };
+    }
+
+    function fitCountdown() {
+      const hero = countdownPre.closest('.countdown-hero');
+      if (!hero) return;
+
+      countdownPre.style.transform = "scale(1)";
+      const contentW = countdownPre.scrollWidth;
+      const contentH = countdownPre.scrollHeight;
+      const padding = 20;
+      const maxWidth = 1280;
+      const availW = Math.min(maxWidth, Math.max(0, hero.clientWidth - padding * 2));
+      const availH = Math.max(0, hero.clientHeight * 0.6 - padding * 2);
+
+      if (contentW === 0 || contentH === 0 || availW === 0) return;
+      const scale = Math.min(availW / contentW, availH / contentH);
+      countdownPre.style.transform = `scale(${scale})`;
+    }
+
+    function tickCountdown() {
+      if (!fontReady || !countdownPre || Object.keys(glyphCache).length === 0) return;
+
+      const now = Date.now();
+      const diff = TARGET - now;
+      const { weeks, days, hours, minutes, seconds, milliseconds } = breakdown(diff);
+
+      const ww = pad(weeks, 2);
+      const dd = pad(days, 2);
+      const hh = pad(hours, 2);
+      const mm = pad(minutes, 2);
+      const ss = pad(seconds, 2);
+      const ms2 = pad(Math.floor(milliseconds / 10), 2);
+
+      const timeStr = `${ww}:${dd}:${hh}:${mm}:${ss}:${ms2}`;
+      const ascii = renderFixedWidth(timeStr);
+      const labels = generateLabels();
+
+      countdownPre.innerHTML = '';
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'crt-blink';
+      labelSpan.textContent = labels;
+      countdownPre.appendChild(labelSpan);
+      countdownPre.appendChild(document.createTextNode('\n\n'));
+      countdownPre.appendChild(document.createTextNode(ascii));
+
+      fitCountdown();
+      requestAnimationFrame(tickCountdown);
+    }
+
+    window.addEventListener("resize", () => setTimeout(fitCountdown, 50));
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initCountdown);
+    } else {
+      initCountdown();
     }
   })();
   </script>
